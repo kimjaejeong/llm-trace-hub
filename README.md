@@ -20,7 +20,9 @@ docker-compose.yml
 - Idempotency key 기반 중복 방지
 - 미종료 span 감지(`has_open_spans`) + trace 완료율(`completion_rate`)
 - Ingestion API (`/ingest/traces`, `/ingest/spans`, `/evals`)
+- LangGraph Ingestion API (`/ingest/langgraph-runs`) for node-level tracing
 - 조회 API (`/traces`, `/traces/{trace_id}` + 텍스트 검색)
+- Dashboard stats API (`/traces/stats/overview`)
 - Decision Engine
   - action enum: `ALLOW_ANSWER`, `BLOCK`, `ESCALATE`, `ALLOW_WITH_WARNING`, `NEED_CLARIFICATION`
   - judge span(type=`judge`) 기록 + trace 최종 decision 귀속
@@ -128,6 +130,48 @@ curl -X POST http://localhost:8000/api/v1/ingest/spans \
   }'
 ```
 
+### 2-1) LangGraph Run/Node 수집
+
+`POST /api/v1/ingest/langgraph-runs`
+
+```bash
+curl -X POST http://localhost:8000/api/v1/ingest/langgraph-runs \
+  -H 'x-api-key: dev-key' -H 'content-type: application/json' \
+  -d '{
+    "trace_id": "33333333-3333-3333-3333-333333333333",
+    "run_id": "lg-run-001",
+    "graph_name": "agent_router",
+    "status": "success",
+    "start_time": "2026-02-07T10:00:00Z",
+    "end_time": "2026-02-07T10:00:04Z",
+    "model": "gpt-4.1-mini",
+    "environment": "prod",
+    "nodes": [
+      {
+        "node_id": "plan",
+        "node_name": "planner",
+        "node_type": "router",
+        "start_time": "2026-02-07T10:00:00Z",
+        "end_time": "2026-02-07T10:00:01Z",
+        "input_state": {"question": "..." },
+        "output_state": {"route": "retrieval"},
+        "idempotency_key": "plan-1"
+      },
+      {
+        "node_id": "retrieve",
+        "node_name": "retrieval",
+        "node_type": "tool",
+        "parent_node_id": "plan",
+        "start_time": "2026-02-07T10:00:01Z",
+        "end_time": "2026-02-07T10:00:03Z",
+        "input_state": {"route": "retrieval"},
+        "output_state": {"docs": 5},
+        "idempotency_key": "retrieve-1"
+      }
+    ]
+  }'
+```
+
 ### 3) Eval attach
 
 `POST /api/v1/evals`
@@ -156,6 +200,10 @@ curl -X POST http://localhost:8000/api/v1/evals \
 `GET /api/v1/traces/{trace_id}`
 
 반환: span tree + timeline + evals + decision history + judge runs
+
+### 5-1) 대시보드 통계 조회
+
+`GET /api/v1/traces/stats/overview?last_hours=24`
 
 ### 6) 정책 생성/조회/활성화
 
@@ -243,15 +291,52 @@ client.attach_eval(
 client.flush()
 ```
 
+LangGraph node-level 예제:
+
+```python
+trace_id = client.start_langgraph_run(
+    graph_name="agent_router",
+    run_id="lg-run-002",
+    input_text="환불 규정 알려줘",
+    model="gpt-4.1-mini",
+)
+
+client.start_langgraph_node(
+    node_id="router",
+    node_name="intent_router",
+    node_type="router",
+    input_state={"question": "환불 규정 알려줘"},
+)
+client.end_langgraph_node(
+    node_id="router",
+    output_state={"route": "policy_lookup"},
+)
+
+client.start_langgraph_node(
+    node_id="policy_lookup",
+    node_name="policy_lookup",
+    node_type="tool",
+    parent_node_id="router",
+    input_state={"route": "policy_lookup"},
+)
+client.end_langgraph_node(
+    node_id="policy_lookup",
+    output_state={"policy_id": "refund-v3"},
+)
+client.flush()
+```
+
 SDK 제공 기능:
 - `start_trace()`, `start_span()`, `end_span()`, `log_event()`, `attach_eval()`
+- `start_langgraph_run()`, `start_langgraph_node()`, `end_langgraph_node()`, `ingest_langgraph_run()`
 - context propagation (`trace_id/span_id`)
 - batch flush + retry/backoff
 
 ## 프론트엔드 화면
 
 - `/` Trace List: 필터 + 테이블 + 페이지네이션 정보
-- `/traces/{trace_id}` Trace Detail: span tree + timeline + eval/decision 표시
+- `/` Trace Dashboard: KPI cards + 필터 + decision/langgraph visibility
+- `/traces/{trace_id}` Trace Detail: span tree + timeline + langgraph node panel + eval/decision 표시
 - `/cases` Cases 목록
 - `/cases/{case_id}` Cases 상세 + ack/resolve
 
@@ -284,6 +369,22 @@ BACKEND_URL=http://localhost:8000 API_KEY=dev-key npm run dev
 ```bash
 cd sdk/python
 pip install -e .
+```
+
+## 빠른 트레이싱 테스트 코드
+
+API 직접 호출:
+
+```bash
+pip install httpx
+python examples/send_trace_via_api.py
+```
+
+SDK 호출:
+
+```bash
+pip install -e sdk/python
+python examples/send_trace_via_sdk.py
 ```
 
 ## 주의

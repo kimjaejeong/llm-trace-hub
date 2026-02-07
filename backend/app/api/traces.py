@@ -45,6 +45,16 @@ def list_traces(
     )
 
 
+@router.get("/stats/overview")
+def get_trace_stats(
+    last_hours: int = Query(default=24, ge=1, le=168),
+    project: Project = Depends(get_project),
+    db: Session = Depends(get_db),
+):
+    service = TraceService(db, project.id)
+    return service.trace_stats(last_hours=last_hours)
+
+
 @router.get("/{trace_id}")
 def get_trace_detail(
     trace_id: UUID,

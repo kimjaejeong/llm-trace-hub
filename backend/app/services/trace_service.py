@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import HTTPException
 from sqlalchemy import Text, and_, func, or_, select
@@ -10,7 +10,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Evaluation, JudgeRun, Span, SpanEvent, Trace, TraceDecision
-from app.schemas.ingest import IngestSpansRequest, IngestTraceBatchRequest, SpanEventType
+from app.schemas.ingest import IngestSpansRequest, IngestTraceBatchRequest, LangGraphRunIn, SpanEventType
+
+
 class TraceService:
     def __init__(self, db: Session, project_id: UUID):
         self.db = db
@@ -59,6 +61,8 @@ class TraceService:
                 user_review_passed=trace_data.user_review_passed,
             )
             self.db.add(trace)
+            # Ensure trace row exists before child spans/events are flushed.
+            self.db.flush()
         else:
             # materialized snapshot update; immutable event history remains in span_events
             trace.status = trace_data.status
@@ -130,9 +134,9 @@ class TraceService:
 
         try:
             self.db.flush()
-        except IntegrityError:
+        except IntegrityError as exc:
             self.db.rollback()
-            raise HTTPException(status_code=409, detail="idempotency conflict")
+            raise HTTPException(status_code=409, detail=f"idempotency conflict: {str(exc.orig)}")
 
         self._recalculate_trace_metrics(trace_data.trace_id)
         self.db.commit()
@@ -209,11 +213,118 @@ class TraceService:
 
         try:
             self.db.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             self.db.rollback()
-            raise HTTPException(status_code=409, detail="idempotency conflict")
+            raise HTTPException(status_code=409, detail=f"idempotency conflict: {str(exc.orig)}")
 
         return {"ingested_events": ingested}
+
+    def ingest_langgraph_run(self, payload: LangGraphRunIn) -> dict[str, Any]:
+        trace_payload = IngestTraceBatchRequest(
+            trace={
+                "trace_id": payload.trace_id,
+                "external_trace_id": payload.run_id,
+                "status": payload.status,
+                "start_time": payload.start_time,
+                "end_time": payload.end_time,
+                "attributes": {
+                    **payload.attributes,
+                    "graph_name": payload.graph_name,
+                    "tags": payload.tags,
+                    "framework": "langgraph",
+                },
+                "model": payload.model,
+                "environment": payload.environment,
+                "user_id": payload.user_id,
+                "session_id": payload.session_id,
+                "input_text": payload.input_text,
+                "output_text": payload.output_text,
+            },
+            spans=[],
+            allow_missing_parent=payload.allow_missing_parent,
+        )
+        self.ingest_trace_batch(trace_payload)
+
+        node_to_span: dict[str, UUID] = {}
+        events: list[dict[str, Any]] = []
+        for node in payload.nodes:
+            span_id = UUID(node.node_id) if self._is_uuid(node.node_id) else uuid5(NAMESPACE_URL, f"{payload.run_id}:{node.node_id}")
+            node_to_span[node.node_id] = span_id
+
+        for node in payload.nodes:
+            span_id = node_to_span[node.node_id]
+            parent_span_id = node_to_span.get(node.parent_node_id) if node.parent_node_id else None
+            events.append(
+                {
+                    "trace_id": payload.trace_id,
+                    "span_id": span_id,
+                    "event_type": SpanEventType.SPAN_STARTED,
+                    "event_time": node.start_time,
+                    "payload": {
+                        "name": node.node_name,
+                        "span_type": "langgraph_node",
+                        "status": "running",
+                        "parent_span_id": str(parent_span_id) if parent_span_id else None,
+                        "idempotency_key": f"{payload.run_id}:{node.idempotency_key}:start",
+                        "attributes": {
+                            "graph_name": payload.graph_name,
+                            "node_id": node.node_id,
+                            "node_name": node.node_name,
+                            "node_type": node.node_type,
+                            "input_state": node.input_state,
+                            "output_state": node.output_state,
+                            "metadata": node.metadata,
+                            "framework": "langgraph",
+                        },
+                    },
+                    "idempotency_key": f"{payload.run_id}:{node.idempotency_key}:event:start",
+                }
+            )
+            if node.end_time:
+                events.append(
+                    {
+                        "trace_id": payload.trace_id,
+                        "span_id": span_id,
+                        "event_type": SpanEventType.SPAN_ENDED,
+                        "event_time": node.end_time,
+                        "payload": {"status": node.status, "error": node.error},
+                        "idempotency_key": f"{payload.run_id}:{node.idempotency_key}:event:end",
+                    }
+                )
+            events.append(
+                {
+                    "trace_id": payload.trace_id,
+                    "span_id": span_id,
+                    "event_type": SpanEventType.EVENT,
+                    "event_time": node.end_time or node.start_time,
+                    "payload": {
+                        "node_type": node.node_type,
+                        "state_transition": {
+                            "input_keys": sorted(node.input_state.keys()),
+                            "output_keys": sorted(node.output_state.keys()),
+                        },
+                    },
+                    "idempotency_key": f"{payload.run_id}:{node.idempotency_key}:event:state",
+                }
+            )
+
+        event_payload = IngestSpansRequest(events=events, allow_missing_parent=payload.allow_missing_parent)
+        ingested = self.ingest_span_events(event_payload)
+        return {
+            "trace_id": str(payload.trace_id),
+            "run_id": payload.run_id,
+            "graph_name": payload.graph_name,
+            "nodes_received": len(payload.nodes),
+            "events_result": ingested,
+        }
+
+    @staticmethod
+    def _is_uuid(value: str) -> bool:
+        try:
+            UUID(value)
+            return True
+        except Exception:
+            return False
 
     def list_traces(
         self,
@@ -272,6 +383,38 @@ class TraceService:
             "page": page,
             "page_size": page_size,
             "total": total,
+        }
+
+    def trace_stats(self, last_hours: int = 24) -> dict[str, Any]:
+        now = datetime.utcnow()
+        window_start = now.replace(minute=0, second=0, microsecond=0)
+        open_count = self.db.scalar(
+            select(func.count()).select_from(Trace).where(and_(Trace.project_id == self.project_id, Trace.has_open_spans.is_(True)))
+        ) or 0
+        success_count = self.db.scalar(
+            select(func.count()).select_from(Trace).where(and_(Trace.project_id == self.project_id, Trace.status == "success"))
+        ) or 0
+        error_count = self.db.scalar(
+            select(func.count()).select_from(Trace).where(and_(Trace.project_id == self.project_id, Trace.status == "error"))
+        ) or 0
+        decision_rows = self.db.execute(
+            select(TraceDecision.action, func.count(TraceDecision.id))
+            .where(TraceDecision.project_id == self.project_id)
+            .group_by(TraceDecision.action)
+        ).all()
+        span_type_rows = self.db.execute(
+            select(Span.span_type, func.count(Span.id)).where(Span.project_id == self.project_id).group_by(Span.span_type)
+        ).all()
+        return {
+            "window_hours": last_hours,
+            "totals": {
+                "open_traces": int(open_count),
+                "success_traces": int(success_count),
+                "error_traces": int(error_count),
+            },
+            "decisions": {k: int(v) for k, v in decision_rows},
+            "span_types": {k: int(v) for k, v in span_type_rows},
+            "sampled_at": window_start.isoformat(),
         }
 
     def get_trace_detail(self, trace_id: UUID) -> dict[str, Any]:

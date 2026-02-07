@@ -70,3 +70,37 @@ class SpanEventIn(BaseModel):
 class IngestSpansRequest(BaseModel):
     events: list[SpanEventIn]
     allow_missing_parent: bool = True
+
+
+class LangGraphNodeIn(BaseModel):
+    node_id: str
+    node_name: str
+    node_type: str = "runnable"
+    parent_node_id: str | None = None
+    status: str = "success"
+    start_time: datetime
+    end_time: datetime | None = None
+    input_state: JsonDict = Field(default_factory=dict)
+    output_state: JsonDict = Field(default_factory=dict)
+    metadata: JsonDict = Field(default_factory=dict)
+    error: str | None = None
+    idempotency_key: str
+
+
+class LangGraphRunIn(BaseModel):
+    trace_id: UUID
+    run_id: str
+    graph_name: str
+    status: str = "running"
+    start_time: datetime
+    end_time: datetime | None = None
+    model: str | None = None
+    environment: str | None = None
+    user_id: str | None = None
+    session_id: str | None = None
+    input_text: str | None = None
+    output_text: str | None = None
+    attributes: JsonDict = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
+    nodes: list[LangGraphNodeIn] = Field(default_factory=list)
+    allow_missing_parent: bool = True
