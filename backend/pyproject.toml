@@ -1,0 +1,24 @@
+[project]
+name = "llm-trace-hub-backend"
+version = "0.1.0"
+description = "LLM observability and decision backend"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "sqlalchemy>=2.0.30",
+  "psycopg[binary]>=3.1.19",
+  "alembic>=1.13.2",
+  "pydantic>=2.7.0",
+  "pydantic-settings>=2.2.1",
+  "python-dateutil>=2.9.0.post0",
+  "httpx>=0.27.0",
+  "pyyaml>=6.0.1"
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
