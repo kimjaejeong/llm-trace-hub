@@ -11,6 +11,7 @@ export default function RootLayout({ children }) {
       <body>
         <div className="container">
           <div className="nav">
+            <Link href="/projects">Projects</Link>
             <Link href="/">Trace Dashboard</Link>
             <Link href="/cases">Cases</Link>
           </div>

@@ -45,9 +45,12 @@ function nodeCostEstimate(totalTokens) {
   return (totalTokens / 1000) * 0.01;
 }
 
-export default async function TraceNodeDetailPage({ params }) {
+export default async function TraceNodeDetailPage({ params, searchParams }) {
   const { traceId, nodeId } = await params;
-  const data = await fetchApi(`/api/v1/traces/${traceId}`);
+  const qp = await searchParams;
+  const projectId = qp?.project_id || "";
+  const scopedHeaders = projectId ? { "x-project-id": projectId } : {};
+  const data = await fetchApi(`/api/v1/traces/${traceId}`, { headers: scopedHeaders });
   const node = data.spans.find((s) => String(s.id) === String(nodeId));
 
   if (!node) {
@@ -55,7 +58,7 @@ export default async function TraceNodeDetailPage({ params }) {
       <div className="card">
         <h2 className="title" style={{ fontSize: 22 }}>Node Not Found</h2>
         <p className="subtitle">node_id={nodeId}</p>
-        <p><Link href={`/traces/${traceId}`}>Back to Trace Detail</Link></p>
+        <p><Link href={`/traces/${traceId}${projectId ? `?project_id=${projectId}` : ""}`}>Back to Trace Detail</Link></p>
       </div>
     );
   }
@@ -73,7 +76,8 @@ export default async function TraceNodeDetailPage({ params }) {
         <LiveRefreshShell label={`Node ${node.attributes?.node_name || node.name}`} />
         <h1 className="title" style={{ fontSize: 28 }}>LangGraph Node Detail</h1>
         <p className="subtitle">
-          Trace <Link href={`/traces/${traceId}`}>{traceId}</Link> · Node {node.id}
+          Trace <Link href={`/traces/${traceId}${projectId ? `?project_id=${projectId}` : ""}`}>{traceId}</Link> · Node {node.id}
+          {projectId ? ` · project_id ${projectId}` : ""}
         </p>
       </div>
 

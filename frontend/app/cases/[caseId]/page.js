@@ -10,28 +10,32 @@ function elapsedHours(start, end) {
   return `${((e - s) / (1000 * 60 * 60)).toFixed(1)}h`;
 }
 
-export default async function CaseDetailPage({ params }) {
+export default async function CaseDetailPage({ params, searchParams }) {
   const { caseId } = await params;
-  const data = await fetchApi(`/api/v1/cases/${caseId}`);
-  const trace = await fetchApi(`/api/v1/traces/${data.trace_id}`);
+  const qp = await searchParams;
+  const projectId = qp?.project_id || "";
+  const scopedHeaders = projectId ? { "x-project-id": projectId } : {};
+  const data = await fetchApi(`/api/v1/cases/${caseId}`, { headers: scopedHeaders });
+  const trace = await fetchApi(`/api/v1/traces/${data.trace_id}`, { headers: scopedHeaders });
 
   return (
     <div className="grid">
       <div className="card">
         <h2 className="title" style={{ fontSize: 24 }}>Case Detail</h2>
         <p className="subtitle">Escalation workflow for one trace.</p>
+        {projectId ? <p className="subtitle" style={{ marginTop: 6 }}>project_id: {projectId}</p> : null}
       </div>
       <div className="grid two">
         <div className="card">
           <div className="kv"><div className="k">Case ID</div><div>{data.id}</div></div>
-          <div className="kv"><div className="k">Trace</div><div><Link href={`/traces/${data.trace_id}`}>{data.trace_id}</Link></div></div>
+          <div className="kv"><div className="k">Trace</div><div><Link href={`/traces/${data.trace_id}${projectId ? `?project_id=${projectId}` : ""}`}>{data.trace_id}</Link></div></div>
           <div className="kv"><div className="k">Reason</div><div>{data.reason_code}</div></div>
           <div className="kv"><div className="k">Status</div><div>{data.status}</div></div>
           <div className="kv"><div className="k">Assignee</div><div>{data.assignee || "-"}</div></div>
           <div className="kv"><div className="k">Created</div><div>{new Date(data.created_at).toLocaleString()}</div></div>
           <div className="kv"><div className="k">Age</div><div>{elapsedHours(data.created_at, data.resolved_at)}</div></div>
           <div style={{ marginTop: 14 }}>
-            <CaseActions caseId={caseId} />
+            <CaseActions caseId={caseId} projectId={projectId} />
           </div>
         </div>
 
@@ -44,7 +48,7 @@ export default async function CaseDetailPage({ params }) {
           <div className="kv"><div className="k">Completion</div><div>{Math.round((trace.trace.completion_rate || 0) * 100)}%</div></div>
           <div className="kv"><div className="k">Open Spans</div><div>{String(trace.trace.has_open_spans)}</div></div>
           <div style={{ marginTop: 12 }}>
-            <Link className="button" href={`/traces/${data.trace_id}`}>Open Trace Detail</Link>
+            <Link className="button" href={`/traces/${data.trace_id}${projectId ? `?project_id=${projectId}` : ""}`}>Open Trace Detail</Link>
           </div>
         </div>
       </div>

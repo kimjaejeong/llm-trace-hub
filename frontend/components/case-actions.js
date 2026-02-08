@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const base = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 const apiKey = process.env.NEXT_PUBLIC_API_KEY || "dev-key";
 
-export default function CaseActions({ caseId }) {
+export default function CaseActions({ caseId, projectId }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [assignee, setAssignee] = useState("oncall");
@@ -19,6 +19,7 @@ export default function CaseActions({ caseId }) {
         headers: {
           "x-api-key": apiKey,
           "content-type": "application/json",
+          ...(projectId ? { "x-project-id": projectId } : {}),
         },
         body: JSON.stringify({ assignee }),
       });

@@ -64,8 +64,10 @@ function asDate(ts) {
 export default async function TracesPage({ searchParams }) {
   const params = await searchParams;
   const q = new URLSearchParams(params || {});
+  const projectId = q.get("project_id") || "";
   q.set("page", q.get("page") || "1");
   q.set("page_size", q.get("page_size") || "10");
+  const scopedHeaders = projectId ? { "x-project-id": projectId } : {};
 
   let data = { items: [], page: Number(q.get("page") || 1), page_size: 10, total: 0 };
   let stats = {
@@ -78,8 +80,8 @@ export default async function TracesPage({ searchParams }) {
   let loadError = null;
 
   const [tracesRes, statsRes] = await Promise.allSettled([
-    fetchApi(`/api/v1/traces?${q.toString()}`),
-    fetchApi("/api/v1/traces/stats/overview?last_hours=24"),
+    fetchApi(`/api/v1/traces?${q.toString()}`, { headers: scopedHeaders }),
+    fetchApi("/api/v1/traces/stats/overview?last_hours=24", { headers: scopedHeaders }),
   ]);
 
   if (tracesRes.status === "fulfilled") {
@@ -127,6 +129,11 @@ export default async function TracesPage({ searchParams }) {
         <div className="card alert-card">
           <h3 className="subhead">Fetch Error</h3>
           <p className="subtitle">{loadError}</p>
+          {String(loadError).includes("inactive") || String(loadError).includes("403") ? (
+            <div style={{ marginTop: 8 }}>
+              <Link className="button detail-btn" href="/projects">Projects에서 Activate 후 다시 시도</Link>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="card">
@@ -135,6 +142,15 @@ export default async function TracesPage({ searchParams }) {
         <p className="subtitle">
           핵심 운영 지표 기준: 오류율, 지연, SLA 위반, 우선 처리 큐.
         </p>
+        {projectId ? (
+          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <span className="pill neutral">project_id: {projectId}</span>
+            <Link className="button detail-btn" href={`/cases?project_id=${projectId}`}>Project Cases</Link>
+            <Link className="button detail-btn" href="/projects">Switch Project</Link>
+          </div>
+        ) : (
+          <p className="subtitle" style={{ marginTop: 6 }}>전체 프로젝트가 아닌 기본 프로젝트 컨텍스트입니다. `Projects` 탭에서 선택하세요.</p>
+        )}
 
         <div className="stats-grid">
           <div className="stat"><div className="label">Open Traces</div><div className="value">{stats.totals.open_traces}</div></div>
@@ -153,7 +169,7 @@ export default async function TracesPage({ searchParams }) {
         ) : (
           <div className="watchlist">
             {priorityQueue.map((row) => (
-              <Link href={`/traces/${row.id}`} key={row.id} className="watch-item">
+              <Link href={`/traces/${row.id}${projectId ? `?project_id=${projectId}` : ""}`} key={row.id} className="watch-item">
                 <span className={riskPill(row.risk_score)}>{row.risk_score}</span>
                 <span className="watch-id">{row.id}</span>
                 <span className={pill(row.status)}>{row.status}</span>
@@ -195,7 +211,7 @@ export default async function TracesPage({ searchParams }) {
             <tbody>
               {traceRows.map((row) => (
                 <tr key={row.id}>
-                  <td><Link href={`/traces/${row.id}`}>{row.id}</Link></td>
+                  <td><Link href={`/traces/${row.id}${projectId ? `?project_id=${projectId}` : ""}`}>{row.id}</Link></td>
                   <td><span className={pill(row.status)}>{row.status}</span></td>
                   <td>{row.model || "-"}</td>
                   <td>{row.environment || "-"}</td>
@@ -208,7 +224,7 @@ export default async function TracesPage({ searchParams }) {
                   <td>{decisionPill(row.decision?.action)}</td>
                   <td><span className={riskPill(row.risk_score)}>{row.risk_score}</span></td>
                   <td>{asDate(row.start_time)}</td>
-                  <td><Link className="button detail-btn" href={`/traces/${row.id}`}>Tracing Detail</Link></td>
+                  <td><Link className="button detail-btn" href={`/traces/${row.id}${projectId ? `?project_id=${projectId}` : ""}`}>Tracing Detail</Link></td>
                 </tr>
               ))}
             </tbody>

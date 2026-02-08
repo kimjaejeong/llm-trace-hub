@@ -1,4 +1,5 @@
 const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY || "dev-key";
+const adminKey = process.env.ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY || apiKey;
 
 function baseCandidates() {
   const values = [
@@ -11,21 +12,31 @@ function baseCandidates() {
   return values.filter(Boolean);
 }
 
-export async function fetchApi(path) {
+export async function fetchApi(path, options = {}) {
   let lastError = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     for (const base of baseCandidates()) {
       try {
+        const headers = {
+          "x-api-key": options.useAdmin ? adminKey : apiKey,
+          ...(options.headers || {}),
+        };
         const res = await fetch(`${base}${path}`, {
-          headers: { "x-api-key": apiKey },
+          headers,
           cache: "no-store",
         });
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(text || `failed ${path} via ${base}`);
+          // HTTP error should be returned as-is; don't hide it with fallback network errors.
+          const err = new Error(text || `failed ${path} via ${base}`);
+          err.name = "HttpError";
+          throw err;
         }
         return res.json();
       } catch (err) {
+        if (err?.name === "HttpError") {
+          throw err;
+        }
         lastError = err;
       }
     }

@@ -60,6 +60,14 @@ x-api-key: dev-key
 - `POST /api/v1/ingest/langgraph-runs`
 - `POST /api/v1/evals`
 
+### Projects (admin)
+- `GET /api/v1/projects`
+- `POST /api/v1/projects`
+- `POST /api/v1/projects/{project_id}/rotate-key`
+- `POST /api/v1/projects/{project_id}/activate`
+- `POST /api/v1/projects/{project_id}/deactivate`
+- `DELETE /api/v1/projects/{project_id}` (soft delete = deactivate)
+
 ### Query
 - `GET /api/v1/traces`
 - `GET /api/v1/traces/{trace_id}`
@@ -259,10 +267,20 @@ curl -X POST http://localhost:8000/api/v1/ingest/langgraph-runs \
 
 ## 9) 프론트 화면
 
+- `/projects` 프로젝트(에이전트) 생성/선택
 - `/` Trace Dashboard (KPI + 필터 + 목록)
 - `/traces/{trace_id}` Trace Detail (span tree + timeline + langgraph node panel)
+- `/traces/{trace_id}/nodes/{node_id}` Node Detail (duration/token usage/source/timeline)
 - `/cases`
 - `/cases/{case_id}`
+
+프로젝트별 조회는 `project_id` 쿼리를 붙여서 사용:
+- `/?project_id=<project_id>`
+- `/cases?project_id=<project_id>`
+
+관리자 프로젝트 API는 admin key가 필요합니다.
+- 권장 env: `ADMIN_KEY`
+- dev 환경 기본: `dev-key`
 
 ## 10) 개발 실행 (개별)
 

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
-function nodeHref(traceId, nodeId) {
-  return `/traces/${traceId}/nodes/${nodeId}`;
+function nodeHref(traceId, nodeId, projectId) {
+  return `/traces/${traceId}/nodes/${nodeId}${projectId ? `?project_id=${projectId}` : ""}`;
 }
 
-export default function LangGraphGraph({ traceId, topology }) {
+export default function LangGraphGraph({ traceId, topology, projectId }) {
   const [expanded, setExpanded] = useState(false);
   const markerId = `arrowhead-${String(traceId).replaceAll("-", "")}`;
 
@@ -37,7 +37,7 @@ export default function LangGraphGraph({ traceId, topology }) {
             />
           ))}
           {topology.nodes.map((node) => (
-            <a key={node.id} href={nodeHref(traceId, node.id)}>
+            <a key={node.id} href={nodeHref(traceId, node.id, projectId)}>
               <g>
                 <rect
                   x={node.x}

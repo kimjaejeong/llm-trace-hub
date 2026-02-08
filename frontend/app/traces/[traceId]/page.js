@@ -196,12 +196,15 @@ function langGraphTopology(nodes) {
   return { nodes: positioned, edges, width, height, boxW, boxH };
 }
 
-function nodeHref(traceId, nodeId) {
-  return `/traces/${traceId}/nodes/${nodeId}`;
+function nodeHref(traceId, nodeId, projectId) {
+  return `/traces/${traceId}/nodes/${nodeId}${projectId ? `?project_id=${projectId}` : ""}`;
 }
 
-export default async function TraceDetailPage({ params }) {
+export default async function TraceDetailPage({ params, searchParams }) {
   const { traceId } = await params;
+  const qp = await searchParams;
+  const projectId = qp?.project_id || "";
+  const scopedHeaders = projectId ? { "x-project-id": projectId } : {};
 
   let data = {
     trace: { id: traceId, status: "unknown", completion_rate: 0 },
@@ -213,7 +216,7 @@ export default async function TraceDetailPage({ params }) {
   };
   let loadError = null;
   try {
-    data = await fetchApi(`/api/v1/traces/${traceId}`);
+    data = await fetchApi(`/api/v1/traces/${traceId}`, { headers: scopedHeaders });
   } catch (err) {
     loadError = err?.message || "failed to load trace detail";
   }
@@ -239,6 +242,13 @@ export default async function TraceDetailPage({ params }) {
       <div className="card">
         <LiveRefreshShell label={`Trace ${traceId}`} />
         <h1 className="title">Trace Detail</h1>
+        {projectId ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+            <span className="pill neutral">project_id: {projectId}</span>
+            <Link className="button detail-btn" href={`/?project_id=${projectId}`}>Back to Dashboard</Link>
+            <Link className="button detail-btn" href={`/cases?project_id=${projectId}`}>Project Cases</Link>
+          </div>
+        ) : null}
         <div className="grid two">
           <div>
             <div className="kv"><div className="k">trace_id</div><div>{data.trace.id}</div></div>
@@ -282,7 +292,7 @@ export default async function TraceDetailPage({ params }) {
                     <td><span className={pill(node.status)}>{node.status}</span></td>
                     <td>{formatDurationMs(node.start_time, node.end_time)}</td>
                     <td>{asDate(node.end_time || node.start_time)}</td>
-                    <td><Link className="button detail-btn" href={nodeHref(traceId, node.id)}>Node Detail</Link></td>
+                    <td><Link className="button detail-btn" href={nodeHref(traceId, node.id, projectId)}>Node Detail</Link></td>
                   </tr>
                 ))}
               </tbody>
@@ -293,7 +303,7 @@ export default async function TraceDetailPage({ params }) {
         <div className="card">
           <h3>LangGraph Node-Edge Graph</h3>
           <p className="subtitle">클릭으로 노드 상세 이동, 크게 보기/접기 지원.</p>
-          <LangGraphGraph traceId={traceId} topology={topology} />
+          <LangGraphGraph traceId={traceId} topology={topology} projectId={projectId} />
         </div>
       </div>
 
@@ -320,7 +330,7 @@ export default async function TraceDetailPage({ params }) {
                         <span className="pill warn">unmapped</span>
                       )}
                     </td>
-                    <td><Link className="button detail-btn" href={nodeHref(traceId, node.id)}>Node Detail</Link></td>
+                    <td><Link className="button detail-btn" href={nodeHref(traceId, node.id, projectId)}>Node Detail</Link></td>
                   </tr>
                 ))}
               </tbody>
