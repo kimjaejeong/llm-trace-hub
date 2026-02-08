@@ -321,6 +321,8 @@ class LLMTraceClient:
         node_id: str,
         status: str = "success",
         output_state: dict[str, Any] | None = None,
+        token_usage: dict[str, Any] | None = None,
+        duration_ms: int | None = None,
         error: str | None = None,
     ) -> None:
         trace_id = _current_trace_id.get()
@@ -338,8 +340,18 @@ class LLMTraceClient:
                 "event_time": self._now(),
                 "payload": {
                     "node_id": node_id,
-                    "output_state": output_state or {},
-                    "state_keys": sorted((output_state or {}).keys()),
+                    "output_state": {
+                        **(output_state or {}),
+                        **({"token_usage": token_usage} if token_usage else {}),
+                        **({"duration_ms": duration_ms} if duration_ms is not None else {}),
+                    },
+                    "state_keys": sorted(
+                        {
+                            **(output_state or {}),
+                            **({"token_usage": token_usage} if token_usage else {}),
+                            **({"duration_ms": duration_ms} if duration_ms is not None else {}),
+                        }.keys()
+                    ),
                 },
                 "idempotency_key": f"{trace_id}:{node_id}:evt:state",
             }

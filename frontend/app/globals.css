@@ -59,6 +59,7 @@ a:hover { text-decoration: underline; }
 .title { margin: 0 0 8px; font-size: 30px; line-height: 1.05; letter-spacing: -0.4px; }
 .subtitle { margin: 0; color: var(--muted); font-size: 14px; }
 .subhead { margin: 0 0 8px; font-size: 18px; }
+.section-title { margin: 4px 2px; font-size: 16px; letter-spacing: 0.2px; color: #304760; }
 
 .live-shell {
   display: flex;
@@ -128,6 +129,10 @@ form.filters {
   padding: 6px 10px;
   font-size: 12px;
 }
+.button.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 
 .watchlist {
   display: grid;
@@ -195,6 +200,17 @@ form.filters {
 .timeline { max-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: #fff; }
 .timeline-item { padding: 8px; border-bottom: 1px dashed var(--line); }
 .timeline-item:last-child { border-bottom: 0; }
+.alert-card {
+  border-left: 6px solid #c46b1b;
+}
+
+.pager {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 
 .graph-canvas-wrap {
   margin-top: 10px;
@@ -203,10 +219,19 @@ form.filters {
   overflow: auto;
   background: linear-gradient(180deg, #fcfdff, #f2f7ff);
 }
+.graph-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
 .graph-canvas {
   min-width: 760px;
   width: 100%;
   height: 320px;
+}
+.graph-canvas-wrap.expanded .graph-canvas {
+  min-width: 1500px;
+  height: 78vh;
 }
 
 @media (max-width: 1200px) {

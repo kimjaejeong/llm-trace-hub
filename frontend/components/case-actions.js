@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const base = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 const apiKey = process.env.NEXT_PUBLIC_API_KEY || "dev-key";
 
 export default function CaseActions({ caseId }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [assignee, setAssignee] = useState("oncall");
 
   async function call(action) {
     setLoading(true);
@@ -17,12 +20,12 @@ export default function CaseActions({ caseId }) {
           "x-api-key": apiKey,
           "content-type": "application/json",
         },
-        body: JSON.stringify({ assignee: "oncall" }),
+        body: JSON.stringify({ assignee }),
       });
       if (!res.ok) {
         throw new Error(await res.text());
       }
-      window.location.reload();
+      router.refresh();
     } catch (err) {
       alert(err.message);
     } finally {
@@ -31,9 +34,10 @@ export default function CaseActions({ caseId }) {
   }
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button className="input" disabled={loading} onClick={() => call("ack")}>Ack</button>
-      <button className="input" disabled={loading} onClick={() => call("resolve")}>Resolve</button>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <input className="input" value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="assignee" />
+      <button className="button" disabled={loading} onClick={() => call("ack")}>Ack</button>
+      <button className="button" disabled={loading} onClick={() => call("resolve")}>Resolve</button>
     </div>
   );
 }

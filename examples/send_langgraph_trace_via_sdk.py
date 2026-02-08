@@ -29,7 +29,11 @@ def main() -> None:
     )
     client.flush()
     time.sleep(1.0)
-    client.end_langgraph_node(node_id="router", output_state={"route": "policy_lookup"})
+    client.end_langgraph_node(
+        node_id="router",
+        output_state={"route": "policy_lookup"},
+        token_usage={"prompt_tokens": 42, "completion_tokens": 16, "total_tokens": 58},
+    )
     client.flush()
     time.sleep(1.0)
 
@@ -44,7 +48,11 @@ def main() -> None:
     )
     client.flush()
     time.sleep(1.0)
-    client.end_langgraph_node(node_id="policy_lookup", output_state={"policy_id": "refund-v3"})
+    client.end_langgraph_node(
+        node_id="policy_lookup",
+        output_state={"policy_id": "refund-v3"},
+        token_usage={"prompt_tokens": 10, "completion_tokens": 6, "total_tokens": 16},
+    )
     client.flush()
     time.sleep(1.0)
 
@@ -62,6 +70,7 @@ def main() -> None:
     client.end_langgraph_node(
         node_id="answer",
         output_state={"answer": "구매 후 7일 이내 미사용 상태에서 환불 가능합니다."},
+        token_usage={"prompt_tokens": 220, "completion_tokens": 68, "total_tokens": 288},
     )
 
     client.flush()

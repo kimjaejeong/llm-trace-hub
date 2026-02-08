@@ -26,11 +26,12 @@ export default function LiveRefreshShell({ label = "Live Stream", defaultLive = 
   useEffect(() => {
     if (!live) return undefined;
     const timer = setInterval(() => {
+      if (isPending) return;
       startTransition(() => router.refresh());
       setLastUpdated(Date.now());
     }, intervalMs);
     return () => clearInterval(timer);
-  }, [intervalMs, live, router]);
+  }, [intervalMs, live, router, isPending]);
 
   return (
     <div className="live-shell">

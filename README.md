@@ -99,6 +99,7 @@ python examples/send_trace_via_api.py
 pip install -e sdk/python
 python examples/send_trace_via_sdk.py
 python examples/send_langgraph_trace_via_sdk.py
+python examples/send_langgraph_complex_via_sdk.py
 ```
 
 설치 없이 실행하려면:
@@ -109,6 +110,7 @@ PYTHONPATH=sdk/python python examples/send_trace_via_sdk.py
 
 성공 시 출력된 `trace_id`로 확인:
 - `http://localhost:3000/traces/<trace_id>`
+- `http://localhost:3000/traces/<trace_id>/nodes/<node_id>`
 
 ## 7) SDK 사용
 
@@ -172,11 +174,17 @@ client.end_langgraph_node(node_id="policy_lookup", output_state={"policy_id": "r
 client.flush()
 ```
 
+필요하면 `end_langgraph_node(..., token_usage={...}, duration_ms=...)`로 노드별 사용량/시간을 명시적으로 보낼 수 있습니다.
+
 `start_langgraph_node()`는 기본적으로 호출 지점의 소스 위치를 `metadata.source_ref`에 자동 첨부합니다.
 Trace Detail 화면에서 아래를 확인할 수 있습니다.
 - `LangGraph Live Nodes`: 노드 상태가 실시간(자동 refresh)으로 반영되는지
 - `LangGraph Node-Edge Graph`: 노드/엣지가 어떻게 연결되었는지
 - `Source` 컬럼 + `LangGraph Source Coverage`: 노드별 소스 매핑 여부
+- `Node Detail`: 노드 단위 duration/token usage/source/event timeline
+
+복잡한 시나리오를 보려면 `examples/send_langgraph_complex_via_sdk.py`를 실행하세요.
+`OPENAI_API_KEY`가 있으면 GPT 호출을 사용하고, 없으면 mocked LLM 응답으로 동일한 노드 흐름을 생성합니다.
 
 ## 8) 대표 API 예시
 

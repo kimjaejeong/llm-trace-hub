@@ -15,12 +15,22 @@ router = APIRouter(prefix="/api/v1/cases", tags=["cases"])
 
 @router.get("")
 def list_cases(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     status: str | None = Query(default=None),
+    assignee: str | None = Query(default=None),
+    reason_code: str | None = Query(default=None),
     project: Project = Depends(get_project),
     db: Session = Depends(get_db),
 ):
     service = CaseService(db, project.id)
-    return service.list_cases(status)
+    return service.list_cases(
+        status=status,
+        assignee=assignee,
+        reason_code=reason_code,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/{case_id}")

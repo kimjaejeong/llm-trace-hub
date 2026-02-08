@@ -45,12 +45,33 @@ export default async function TracesPage({ searchParams }) {
   const params = await searchParams;
   const q = new URLSearchParams(params || {});
   q.set("page", q.get("page") || "1");
-  q.set("page_size", q.get("page_size") || "20");
+  q.set("page_size", q.get("page_size") || "10");
 
-  const [data, stats] = await Promise.all([
+  let data = { items: [], page: Number(q.get("page") || 1), page_size: 10, total: 0 };
+  let stats = {
+    window_hours: 24,
+    totals: { open_traces: 0, success_traces: 0, error_traces: 0 },
+    decisions: {},
+    span_types: {},
+    sampled_at: new Date().toISOString(),
+  };
+  let loadError = null;
+
+  const [tracesRes, statsRes] = await Promise.allSettled([
     fetchApi(`/api/v1/traces?${q.toString()}`),
     fetchApi("/api/v1/traces/stats/overview?last_hours=24"),
   ]);
+
+  if (tracesRes.status === "fulfilled") {
+    data = tracesRes.value;
+  } else {
+    loadError = tracesRes.reason?.message || "failed to load traces";
+  }
+  if (statsRes.status === "fulfilled") {
+    stats = statsRes.value;
+  } else if (!loadError) {
+    loadError = `stats degraded: ${statsRes.reason?.message || "unavailable"}`;
+  }
 
   const traceRows = data.items.map((row) => ({ ...row, risk_score: riskScore(row) }));
   const watchlist = [...traceRows].filter((row) => row.risk_score >= 40).sort((a, b) => b.risk_score - a.risk_score).slice(0, 5);
@@ -67,9 +88,24 @@ export default async function TracesPage({ searchParams }) {
   const reviewGap = Math.round(
     (reviewed.filter((row) => row.user_review_passed === false).length / Math.max(reviewed.length, 1)) * 100
   );
+  const totalPages = Math.max(1, Math.ceil((data.total || 0) / Math.max(data.page_size || 10, 1)));
+  const prevPage = Math.max(1, data.page - 1);
+  const nextPage = Math.min(totalPages, data.page + 1);
+  const prevQ = new URLSearchParams(params || {});
+  prevQ.set("page", String(prevPage));
+  prevQ.set("page_size", String(data.page_size || 10));
+  const nextQ = new URLSearchParams(params || {});
+  nextQ.set("page", String(nextPage));
+  nextQ.set("page_size", String(data.page_size || 10));
 
   return (
     <div className="grid">
+      {loadError ? (
+        <div className="card alert-card">
+          <h3 className="subhead">Fetch Error</h3>
+          <p className="subtitle">{loadError}</p>
+        </div>
+      ) : null}
       <div className="card">
         <LiveRefreshShell label="Trace Control Room" />
         <h1 className="title">Realtime LLM Trace Control Room</h1>
@@ -170,7 +206,19 @@ export default async function TracesPage({ searchParams }) {
             </tbody>
           </table>
         </div>
-        <p className="subtitle">Page {data.page} · Total {data.total}</p>
+        <div className="pager">
+          {data.page > 1 ? (
+            <Link className="button" href={`/?${prevQ.toString()}`}>Prev</Link>
+          ) : (
+            <span className="button disabled">Prev</span>
+          )}
+          <span className="subtitle">Page {data.page} / {totalPages} · Total {data.total}</span>
+          {data.page < totalPages ? (
+            <Link className="button" href={`/?${nextQ.toString()}`}>Next</Link>
+          ) : (
+            <span className="button disabled">Next</span>
+          )}
+        </div>
       </div>
     </div>
   );

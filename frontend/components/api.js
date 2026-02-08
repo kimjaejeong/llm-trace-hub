@@ -13,19 +13,24 @@ function baseCandidates() {
 
 export async function fetchApi(path) {
   let lastError = null;
-  for (const base of baseCandidates()) {
-    try {
-      const res = await fetch(`${base}${path}`, {
-        headers: { "x-api-key": apiKey },
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `failed ${path} via ${base}`);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (const base of baseCandidates()) {
+      try {
+        const res = await fetch(`${base}${path}`, {
+          headers: { "x-api-key": apiKey },
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `failed ${path} via ${base}`);
+        }
+        return res.json();
+      } catch (err) {
+        lastError = err;
       }
-      return res.json();
-    } catch (err) {
-      lastError = err;
+    }
+    if (attempt === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
   throw new Error(`fetch failed for ${path}: ${lastError?.message || "unknown error"}`);

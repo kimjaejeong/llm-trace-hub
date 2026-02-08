@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { fetchApi } from "../../../components/api";
 import LiveRefreshShell from "../../../components/live-refresh-shell";
+import LangGraphGraph from "../../../components/langgraph-graph";
 
 function pill(status) {
   if (status === "success") return "pill ok";
@@ -161,9 +163,28 @@ function langGraphTopology(nodes) {
   return { nodes: positioned, edges, width, height, boxW, boxH };
 }
 
+function nodeHref(traceId, nodeId) {
+  return `/traces/${traceId}/nodes/${nodeId}`;
+}
+
 export default async function TraceDetailPage({ params }) {
   const { traceId } = await params;
-  const data = await fetchApi(`/api/v1/traces/${traceId}`);
+
+  let data = {
+    trace: { id: traceId, status: "unknown", completion_rate: 0 },
+    spans: [],
+    timeline: [],
+    evaluations: [],
+    decision_history: [],
+    judge_runs: [],
+  };
+  let loadError = null;
+  try {
+    data = await fetchApi(`/api/v1/traces/${traceId}`);
+  } catch (err) {
+    loadError = err?.message || "failed to load trace detail";
+  }
+
   const graphNodes = data.spans.filter((s) => s.span_type === "langgraph_node");
   const tree = treeRows(data.spans);
   const diffs = stateDiffRows(graphNodes);
@@ -173,43 +194,39 @@ export default async function TraceDetailPage({ params }) {
   const runningNodes = graphNodes.filter((node) => !node.end_time || node.status === "running");
 
   return (
-    <div className="grid two">
+    <div className="grid">
+      {loadError ? (
+        <div className="card alert-card">
+          <h3 className="subhead">Fetch Error</h3>
+          <p className="subtitle">{loadError}</p>
+        </div>
+      ) : null}
+
+      <div className="card">
+        <LiveRefreshShell label={`Trace ${traceId}`} />
+        <h1 className="title">Trace Detail</h1>
+        <div className="grid two">
+          <div>
+            <div className="kv"><div className="k">trace_id</div><div>{data.trace.id}</div></div>
+            <div className="kv"><div className="k">status</div><div><span className={pill(data.trace.status)}>{data.trace.status}</span></div></div>
+            <div className="kv"><div className="k">completion</div><div>{Math.round((data.trace.completion_rate || 0) * 100)}%</div></div>
+          </div>
+          <div>
+            <div className="kv"><div className="k">decision</div><div>{data.trace.decision?.action || "none"}</div></div>
+            <div className="kv"><div className="k">review</div><div>{String(data.trace.user_review_passed)}</div></div>
+            <div className="kv"><div className="k">model/env</div><div>{data.trace.model || "-"} / {data.trace.environment || "-"}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="section-title">Runtime Flow</h3>
       <div className="grid">
         <div className="card">
-          <LiveRefreshShell label={`Trace ${traceId}`} />
-          <h1 className="title">Trace Detail</h1>
-          <div className="kv"><div className="k">trace_id</div><div>{data.trace.id}</div></div>
-          <div className="kv"><div className="k">status</div><div><span className={pill(data.trace.status)}>{data.trace.status}</span></div></div>
-          <div className="kv"><div className="k">decision</div><div>{data.trace.decision?.action || "none"}</div></div>
-          <div className="kv"><div className="k">user_review</div><div>{String(data.trace.user_review_passed)}</div></div>
-          <div className="kv"><div className="k">completion</div><div>{Math.round((data.trace.completion_rate || 0) * 100)}%</div></div>
-          <div className="kv"><div className="k">model/env</div><div>{data.trace.model || "-"} / {data.trace.environment || "-"}</div></div>
-        </div>
-
-        <div className="card">
-          <h3>Span Tree</h3>
-          <ul className="tree">
-            {tree.map(({ node, depth }) => (
-              <li key={node.id} style={{ marginLeft: depth * 14 }}>
-                <div className="node-head">
-                  <span className={pill(node.status)}>{node.status}</span>
-                  <span>{node.name}</span>
-                  <span style={{ color: "var(--muted)", fontSize: 12 }}>({node.span_type})</span>
-                </div>
-                <div style={{ color: "var(--muted)", fontSize: 12 }}>{asDate(node.start_time)} → {asDate(node.end_time)}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="card">
           <h3>LangGraph Live Nodes</h3>
-          <p className="subtitle">
-            Running {runningNodes.length}/{graphNodes.length} nodes · auto refresh enabled
-          </p>
+          <p className="subtitle">Running {runningNodes.length}/{graphNodes.length} nodes</p>
           <div className="table-wrap" style={{ marginTop: 10 }}>
             <table className="table">
-              <thead><tr><th>Node</th><th>Status</th><th>Duration</th><th>Updated</th></tr></thead>
+              <thead><tr><th>Node</th><th>Status</th><th>Duration</th><th>Updated</th><th>Inspect</th></tr></thead>
               <tbody>
                 {graphNodes.map((node) => (
                   <tr key={node.id}>
@@ -217,6 +234,7 @@ export default async function TraceDetailPage({ params }) {
                     <td><span className={pill(node.status)}>{node.status}</span></td>
                     <td>{formatDurationMs(node.start_time, node.end_time)}</td>
                     <td>{asDate(node.end_time || node.start_time)}</td>
+                    <td><Link className="button detail-btn" href={nodeHref(traceId, node.id)}>Node Detail</Link></td>
                   </tr>
                 ))}
               </tbody>
@@ -226,58 +244,19 @@ export default async function TraceDetailPage({ params }) {
 
         <div className="card">
           <h3>LangGraph Node-Edge Graph</h3>
-          <p className="subtitle">Node topology reconstructed from parent-child spans in this trace.</p>
-          <div className="graph-canvas-wrap">
-            <svg className="graph-canvas" viewBox={`0 0 ${topology.width} ${topology.height}`} preserveAspectRatio="xMinYMin meet">
-              <defs>
-                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                  <polygon points="0 0, 8 3, 0 6" fill="#8aa0b8" />
-                </marker>
-              </defs>
-              {topology.edges.map((edge, idx) => (
-                <line
-                  key={idx}
-                  x1={edge.fromX}
-                  y1={edge.fromY}
-                  x2={edge.toX}
-                  y2={edge.toY}
-                  stroke="#8aa0b8"
-                  strokeWidth="1.6"
-                  markerEnd="url(#arrowhead)"
-                />
-              ))}
-              {topology.nodes.map((node) => (
-                <g key={node.id}>
-                  <rect
-                    x={node.x}
-                    y={node.y}
-                    width={topology.boxW}
-                    height={topology.boxH}
-                    rx="12"
-                    fill="#ffffff"
-                    stroke="#cdd8e8"
-                  />
-                  <text x={node.x + 10} y={node.y + 24} fontSize="12" fontWeight="700" fill="#132742">
-                    {(node.attributes?.node_name || node.name || "").slice(0, 25)}
-                  </text>
-                  <text x={node.x + 10} y={node.y + 42} fontSize="11" fill="#5f7188">
-                    {(node.attributes?.node_type || "-").slice(0, 20)}
-                  </text>
-                  <text x={node.x + 10} y={node.y + 60} fontSize="11" fill="#5f7188">
-                    {String(node.status).slice(0, 20)}
-                  </text>
-                </g>
-              ))}
-            </svg>
-          </div>
+          <p className="subtitle">클릭으로 노드 상세 이동, 크게 보기/접기 지원.</p>
+          <LangGraphGraph traceId={traceId} topology={topology} />
         </div>
+      </div>
 
+      <h3 className="section-title">Node Diagnostics</h3>
+      <div className="grid two">
         <div className="card">
           <h3>LangGraph Nodes ({graphNodes.length})</h3>
           <p className="subtitle">Source mapped {mappedNodes.length}/{graphNodes.length} ({sourceCoverage}%)</p>
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Node</th><th>Type</th><th>Status</th><th>Source</th><th>State Keys</th></tr></thead>
+              <thead><tr><th>Node</th><th>Type</th><th>Status</th><th>Source</th><th>Inspect</th></tr></thead>
               <tbody>
                 {graphNodes.map((node) => (
                   <tr key={node.id}>
@@ -286,21 +265,14 @@ export default async function TraceDetailPage({ params }) {
                     <td><span className={pill(node.status)}>{node.status}</span></td>
                     <td>
                       {sourceRef(node) ? (
-                        <div>
-                          <div><span className="pill ok">mapped</span></div>
-                          <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
-                            {sourceRef(node).file}:{sourceRef(node).line} · {sourceRef(node).function}
-                          </div>
+                        <div style={{ color: "var(--muted)", fontSize: 12 }}>
+                          {sourceRef(node).file}:{sourceRef(node).line}
                         </div>
                       ) : (
                         <span className="pill warn">unmapped</span>
                       )}
                     </td>
-                    <td>
-                      in: {(Object.keys(node.attributes?.input_state || {})).join(", ") || "-"}
-                      <br />
-                      out: {(Object.keys(node.attributes?.output_state || {})).join(", ") || "-"}
-                    </td>
+                    <td><Link className="button detail-btn" href={nodeHref(traceId, node.id)}>Node Detail</Link></td>
                   </tr>
                 ))}
               </tbody>
@@ -309,19 +281,10 @@ export default async function TraceDetailPage({ params }) {
         </div>
 
         <div className="card">
-          <h3>LangGraph Source Coverage (custom)</h3>
-          <div className="kv"><div className="k">Coverage</div><div>{sourceCoverage}%</div></div>
-          <div className="kv"><div className="k">Mapped Nodes</div><div>{mappedNodes.length}</div></div>
-          <div className="kv"><div className="k">Unmapped Nodes</div><div>{Math.max(graphNodes.length - mappedNodes.length, 0)}</div></div>
-          <div className="kv"><div className="k">Check Rule</div><div>`metadata.source_ref` exists per node</div></div>
-        </div>
-
-        <div className="card">
-          <h3>State Transition Diff (custom)</h3>
-          <p className="subtitle">Keys introduced/removed per LangGraph node, for state-shape drift detection.</p>
+          <h3>State Transition Diff</h3>
           <div className="table-wrap" style={{ marginTop: 10 }}>
             <table className="table">
-              <thead><tr><th>Node</th><th>Added Keys</th><th>Removed Keys</th><th>Stable Keys</th></tr></thead>
+              <thead><tr><th>Node</th><th>Added</th><th>Removed</th><th>Stable</th></tr></thead>
               <tbody>
                 {diffs.map((d) => (
                   <tr key={d.id}>
@@ -337,7 +300,24 @@ export default async function TraceDetailPage({ params }) {
         </div>
       </div>
 
-      <div className="grid">
+      <h3 className="section-title">Governance And Audit</h3>
+      <div className="grid two">
+        <div className="card">
+          <h3>Span Tree</h3>
+          <ul className="tree">
+            {tree.map(({ node, depth }) => (
+              <li key={node.id} style={{ marginLeft: depth * 14 }}>
+                <div className="node-head">
+                  <span className={pill(node.status)}>{node.status}</span>
+                  <span>{node.name}</span>
+                  <span style={{ color: "var(--muted)", fontSize: 12 }}>({node.span_type})</span>
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: 12 }}>{asDate(node.start_time)} to {asDate(node.end_time)}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className="card">
           <h3>Timeline</h3>
           <div className="timeline">
@@ -345,20 +325,30 @@ export default async function TraceDetailPage({ params }) {
               <div key={idx} className="timeline-item">
                 <div style={{ fontWeight: 700 }}>{t.event_type}</div>
                 <div style={{ color: "var(--muted)", fontSize: 12 }}>{asDate(t.timestamp)} · {t.source}</div>
-                <div className="code" style={{ marginTop: 6 }}>{JSON.stringify(t.payload || {}, null, 2)}</div>
+                <details style={{ marginTop: 6 }}>
+                  <summary className="subtitle">payload</summary>
+                  <div className="code" style={{ marginTop: 6 }}>{JSON.stringify(t.payload || {}, null, 2)}</div>
+                </details>
               </div>
             ))}
           </div>
         </div>
+      </div>
 
+      <div className="grid two">
         <div className="card">
           <h3>Evaluations</h3>
-          <div className="code">{JSON.stringify(data.evaluations, null, 2)}</div>
+          <details>
+            <summary className="subtitle">Expand</summary>
+            <div className="code" style={{ marginTop: 8 }}>{JSON.stringify(data.evaluations, null, 2)}</div>
+          </details>
         </div>
-
         <div className="card">
-          <h3>Decision + Judge Runs</h3>
-          <div className="code">{JSON.stringify({ decision_history: data.decision_history, judge_runs: data.judge_runs }, null, 2)}</div>
+          <h3>Decision And Judge Runs</h3>
+          <details>
+            <summary className="subtitle">Expand</summary>
+            <div className="code" style={{ marginTop: 8 }}>{JSON.stringify({ decision_history: data.decision_history, judge_runs: data.judge_runs }, null, 2)}</div>
+          </details>
         </div>
       </div>
     </div>

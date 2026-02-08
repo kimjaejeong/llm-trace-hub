@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import httpx
 from fastapi import HTTPException
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -54,11 +54,52 @@ class CaseService:
         self.db.refresh(case)
         return case
 
-    def list_cases(self, status: str | None) -> list[Case]:
+    def list_cases(
+        self,
+        status: str | None,
+        assignee: str | None,
+        reason_code: str | None,
+        page: int,
+        page_size: int,
+    ) -> dict:
         q = select(Case).where(Case.project_id == self.project_id)
         if status:
             q = q.where(Case.status == status)
-        return self.db.scalars(q.order_by(Case.created_at.desc())).all()
+        if assignee:
+            q = q.where(Case.assignee == assignee)
+        if reason_code:
+            q = q.where(Case.reason_code == reason_code)
+
+        total = self.db.scalar(select(func.count()).select_from(q.subquery())) or 0
+        rows = self.db.scalars(
+            q.order_by(Case.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        ).all()
+        return {
+            "items": rows,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "stats": self.case_stats(),
+        }
+
+    def case_stats(self) -> dict:
+        status_rows = self.db.execute(
+            select(Case.status, func.count(Case.id)).where(Case.project_id == self.project_id).group_by(Case.status)
+        ).all()
+        overdue_at = datetime.now(timezone.utc) - timedelta(hours=24)
+        overdue_open = self.db.scalar(
+            select(func.count(Case.id)).where(
+                and_(
+                    Case.project_id == self.project_id,
+                    Case.status == "open",
+                    Case.created_at < overdue_at,
+                )
+            )
+        ) or 0
+        return {
+            "by_status": {k: int(v) for k, v in status_rows},
+            "overdue_open_24h": int(overdue_open),
+        }
 
     def get_case(self, case_id: UUID) -> Case:
         case = self.db.scalar(select(Case).where(and_(Case.id == case_id, Case.project_id == self.project_id)))
