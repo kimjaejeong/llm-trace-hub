@@ -33,6 +33,26 @@ function riskPill(score) {
   return "pill ok";
 }
 
+function durationMs(start, end) {
+  if (!start) return 0;
+  const s = new Date(start).getTime();
+  const e = end ? new Date(end).getTime() : Date.now();
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+  return Math.max(0, e - s);
+}
+
+function p95(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
+  return sorted[idx];
+}
+
+function fmtMs(ms) {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 function asDate(ts) {
   try {
     return new Date(ts).toLocaleString();
@@ -73,21 +93,24 @@ export default async function TracesPage({ searchParams }) {
     loadError = `stats degraded: ${statsRes.reason?.message || "unavailable"}`;
   }
 
-  const traceRows = data.items.map((row) => ({ ...row, risk_score: riskScore(row) }));
-  const watchlist = [...traceRows].filter((row) => row.risk_score >= 40).sort((a, b) => b.risk_score - a.risk_score).slice(0, 5);
+  const slaMs = 30000;
+  const traceRows = data.items.map((row) => {
+    const duration_ms = durationMs(row.start_time, row.end_time);
+    const sla_breach = duration_ms >= slaMs;
+    return { ...row, risk_score: riskScore(row), duration_ms, sla_breach };
+  });
+  const priorityQueue = [...traceRows]
+    .filter((row) => row.sla_breach || row.status === "error" || row.risk_score >= 70)
+    .sort((a, b) => b.risk_score - a.risk_score)
+    .slice(0, 6);
 
   const decisions = stats.decisions || {};
   const decisionTotal = Object.values(decisions).reduce((acc, cur) => acc + Number(cur || 0), 0);
-  const allowRate = Math.round(((decisions.ALLOW_ANSWER || 0) / Math.max(decisionTotal, 1)) * 100);
-  const pressureIndex = Math.round(
-    ((stats.totals.error_traces + (decisions.ESCALATE || 0) + (decisions.BLOCK || 0)) /
-      Math.max(stats.totals.open_traces + stats.totals.success_traces + stats.totals.error_traces, 1)) *
-      100
-  );
-  const reviewed = traceRows.filter((row) => row.user_review_passed !== null);
-  const reviewGap = Math.round(
-    (reviewed.filter((row) => row.user_review_passed === false).length / Math.max(reviewed.length, 1)) * 100
-  );
+  const totalTraces = Math.max(stats.totals.open_traces + stats.totals.success_traces + stats.totals.error_traces, 1);
+  const errorRate = Math.round((stats.totals.error_traces / totalTraces) * 100);
+  const escalationRate = Math.round((((decisions.ESCALATE || 0) + (decisions.BLOCK || 0)) / Math.max(decisionTotal, 1)) * 100);
+  const p95Latency = p95(traceRows.map((r) => r.duration_ms));
+  const breachCount = traceRows.filter((r) => r.sla_breach).length;
   const totalPages = Math.max(1, Math.ceil((data.total || 0) / Math.max(data.page_size || 10, 1)));
   const prevPage = Math.max(1, data.page - 1);
   const nextPage = Math.min(totalPages, data.page + 1);
@@ -110,48 +133,35 @@ export default async function TracesPage({ searchParams }) {
         <LiveRefreshShell label="Trace Control Room" />
         <h1 className="title">Realtime LLM Trace Control Room</h1>
         <p className="subtitle">
-          LangGraph node tracing, decision outcomes, and operator-first triage in one view.
+          핵심 운영 지표 기준: 오류율, 지연, SLA 위반, 우선 처리 큐.
         </p>
 
         <div className="stats-grid">
           <div className="stat"><div className="label">Open Traces</div><div className="value">{stats.totals.open_traces}</div></div>
-          <div className="stat"><div className="label">Success</div><div className="value">{stats.totals.success_traces}</div></div>
-          <div className="stat"><div className="label">Errors</div><div className="value">{stats.totals.error_traces}</div></div>
-          <div className="stat"><div className="label">Escalations</div><div className="value">{stats.decisions.ESCALATE || 0}</div></div>
-          <div className="stat"><div className="label">LangGraph Nodes</div><div className="value">{stats.span_types.langgraph_node || 0}</div></div>
-          <div className="stat"><div className="label">Guardrail Pressure</div><div className="value">{pressureIndex}%</div></div>
-          <div className="stat"><div className="label">Autonomy Index</div><div className="value">{allowRate}%</div></div>
-          <div className="stat"><div className="label">Review Gap</div><div className="value">{reviewGap}%</div></div>
+          <div className="stat"><div className="label">Error Rate</div><div className="value">{errorRate}%</div></div>
+          <div className="stat"><div className="label">Escalation Rate</div><div className="value">{escalationRate}%</div></div>
+          <div className="stat"><div className="label">P95 Latency</div><div className="value">{fmtMs(p95Latency)}</div></div>
+          <div className="stat"><div className="label">SLA Breach (30s)</div><div className="value">{breachCount}</div></div>
         </div>
       </div>
 
-      <div className="grid two">
-        <div className="card">
-          <h3 className="subhead">AI Watchlist</h3>
-          <p className="subtitle">Auto-ranked traces by risk score (custom feature).</p>
-          {watchlist.length === 0 ? (
-            <p className="subtitle" style={{ marginTop: 8 }}>No active high-risk traces.</p>
-          ) : (
-            <div className="watchlist">
-              {watchlist.map((row) => (
-                <Link href={`/traces/${row.id}`} key={row.id} className="watch-item">
-                  <span className={riskPill(row.risk_score)}>{row.risk_score}</span>
-                  <span className="watch-id">{row.id}</span>
-                  <span className={pill(row.status)}>{row.status}</span>
-                  <span>{row.decision?.action || "no-decision"}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="card">
-          <h3 className="subhead">Now</h3>
-          <div className="kv"><div className="k">Sample Window</div><div>{stats.window_hours}h rolling</div></div>
-          <div className="kv"><div className="k">Sampled At</div><div>{asDate(stats.sampled_at)}</div></div>
-          <div className="kv"><div className="k">Top Action</div><div>{Object.entries(decisions).sort((a, b) => b[1] - a[1])[0]?.[0] || "-"}</div></div>
-          <div className="kv"><div className="k">Decision Volume</div><div>{decisionTotal}</div></div>
-          <div className="kv"><div className="k">Feature Flag</div><div>Risk Scoring + Watchlist enabled</div></div>
-        </div>
+      <div className="card">
+        <h3 className="subhead">Priority Queue</h3>
+        <p className="subtitle">에러, SLA 위반, 고위험 트레이스 우선 처리 목록</p>
+        {priorityQueue.length === 0 ? (
+          <p className="subtitle" style={{ marginTop: 8 }}>No priority traces.</p>
+        ) : (
+          <div className="watchlist">
+            {priorityQueue.map((row) => (
+              <Link href={`/traces/${row.id}`} key={row.id} className="watch-item">
+                <span className={riskPill(row.risk_score)}>{row.risk_score}</span>
+                <span className="watch-id">{row.id}</span>
+                <span className={pill(row.status)}>{row.status}</span>
+                <span className={row.sla_breach ? "pill err" : "pill neutral"}>{row.sla_breach ? "SLA breach" : "within SLA"}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -174,11 +184,10 @@ export default async function TracesPage({ searchParams }) {
                 <th>Model</th>
                 <th>Env</th>
                 <th>User/Session</th>
-                <th>Completion</th>
+                <th>Duration</th>
+                <th>SLA</th>
                 <th>Decision</th>
-                <th>Review</th>
                 <th>Risk</th>
-                <th>LangGraph</th>
                 <th>Started</th>
                 <th>Detail</th>
               </tr>
@@ -194,11 +203,10 @@ export default async function TracesPage({ searchParams }) {
                     <div>{row.user_id || "-"}</div>
                     <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.session_id || "-"}</div>
                   </td>
-                  <td>{Math.round((row.completion_rate || 0) * 100)}%</td>
+                  <td>{fmtMs(row.duration_ms)}</td>
+                  <td><span className={row.sla_breach ? "pill err" : "pill ok"}>{row.sla_breach ? "breach" : "ok"}</span></td>
                   <td>{decisionPill(row.decision?.action)}</td>
-                  <td>{row.user_review_passed === null ? "-" : String(row.user_review_passed)}</td>
                   <td><span className={riskPill(row.risk_score)}>{row.risk_score}</span></td>
-                  <td>{row.decision?.policy_version ? "Judge + Policy" : (row.model ? "possible" : "-")}</td>
                   <td>{asDate(row.start_time)}</td>
                   <td><Link className="button detail-btn" href={`/traces/${row.id}`}>Tracing Detail</Link></td>
                 </tr>

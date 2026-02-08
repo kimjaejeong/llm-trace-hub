@@ -68,6 +68,39 @@ function formatDurationMs(start, end) {
   return `${Math.max(0, e - s)}ms`;
 }
 
+function spanDurationMs(span) {
+  if (!span?.start_time) return 0;
+  const s = new Date(span.start_time).getTime();
+  const e = span.end_time ? new Date(span.end_time).getTime() : Date.now();
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+  return Math.max(0, e - s);
+}
+
+function criticalPath(spans) {
+  const children = new Map();
+  const byId = new Map();
+  for (const span of spans) {
+    byId.set(String(span.id), span);
+    const key = span.parent_span_id ? String(span.parent_span_id) : "root";
+    if (!children.has(key)) children.set(key, []);
+    children.get(key).push(span);
+  }
+
+  let best = { total: 0, path: [] };
+  function dfs(node, acc, path) {
+    const dur = spanDurationMs(node);
+    const nextAcc = acc + dur;
+    const nextPath = [...path, { id: node.id, name: node.name, span_type: node.span_type, duration_ms: dur }];
+    const kids = children.get(String(node.id)) || [];
+    if (!kids.length && nextAcc > best.total) best = { total: nextAcc, path: nextPath };
+    for (const child of kids) dfs(child, nextAcc, nextPath);
+  }
+
+  const roots = children.get("root") || [];
+  for (const root of roots) dfs(root, 0, []);
+  return best;
+}
+
 function langGraphTopology(nodes) {
   const nodeMap = new Map(nodes.map((n) => [String(n.id), n]));
   const children = new Map();
@@ -192,6 +225,7 @@ export default async function TraceDetailPage({ params }) {
   const mappedNodes = graphNodes.filter((node) => !!sourceRef(node));
   const sourceCoverage = Math.round((mappedNodes.length / Math.max(graphNodes.length, 1)) * 100);
   const runningNodes = graphNodes.filter((node) => !node.end_time || node.status === "running");
+  const cp = criticalPath(data.spans);
 
   return (
     <div className="grid">
@@ -222,6 +256,20 @@ export default async function TraceDetailPage({ params }) {
       <h3 className="section-title">Runtime Flow</h3>
       <div className="grid">
         <div className="card">
+          <h3>Execution Hot Path (must-have)</h3>
+          <div className="kv"><div className="k">Total Duration</div><div>{formatDurationMs(data.trace.start_time, data.trace.end_time)}</div></div>
+          <div className="kv"><div className="k">Critical Path</div><div>{cp.total}ms</div></div>
+          <div className="kv"><div className="k">Nodes In Path</div><div>{cp.path.length}</div></div>
+          <div className="path-row">
+            {cp.path.map((item, idx) => (
+              <span key={item.id} className="path-node">
+                {item.name} ({item.duration_ms}ms){idx < cp.path.length - 1 ? " -> " : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
           <h3>LangGraph Live Nodes</h3>
           <p className="subtitle">Running {runningNodes.length}/{graphNodes.length} nodes</p>
           <div className="table-wrap" style={{ marginTop: 10 }}>
@@ -250,11 +298,11 @@ export default async function TraceDetailPage({ params }) {
       </div>
 
       <h3 className="section-title">Node Diagnostics</h3>
-      <div className="grid two">
-        <div className="card">
-          <h3>LangGraph Nodes ({graphNodes.length})</h3>
-          <p className="subtitle">Source mapped {mappedNodes.length}/{graphNodes.length} ({sourceCoverage}%)</p>
-          <div className="table-wrap">
+      <div className="card">
+        <div className="kv"><div className="k">Source Coverage</div><div>{mappedNodes.length}/{graphNodes.length} ({sourceCoverage}%)</div></div>
+        <details style={{ marginTop: 10 }}>
+          <summary className="subtitle">Node Inventory</summary>
+          <div className="table-wrap" style={{ marginTop: 8 }}>
             <table className="table">
               <thead><tr><th>Node</th><th>Type</th><th>Status</th><th>Source</th><th>Inspect</th></tr></thead>
               <tbody>
@@ -278,11 +326,10 @@ export default async function TraceDetailPage({ params }) {
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div className="card">
-          <h3>State Transition Diff</h3>
-          <div className="table-wrap" style={{ marginTop: 10 }}>
+        </details>
+        <details style={{ marginTop: 10 }}>
+          <summary className="subtitle">State Transition Diff</summary>
+          <div className="table-wrap" style={{ marginTop: 8 }}>
             <table className="table">
               <thead><tr><th>Node</th><th>Added</th><th>Removed</th><th>Stable</th></tr></thead>
               <tbody>
@@ -297,7 +344,7 @@ export default async function TraceDetailPage({ params }) {
               </tbody>
             </table>
           </div>
-        </div>
+        </details>
       </div>
 
       <h3 className="section-title">Governance And Audit</h3>
