@@ -23,7 +23,12 @@ export default async function CaseDetailPage({ params, searchParams }) {
       <div className="card">
         <h2 className="title" style={{ fontSize: 24 }}>Case Detail</h2>
         <p className="subtitle">Escalation workflow for one trace.</p>
-        {projectId ? <p className="subtitle" style={{ marginTop: 6 }}>project_id: {projectId}</p> : null}
+        {projectId ? (
+          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <span className="pill neutral">project_id: {projectId}</span>
+            <Link className="button detail-btn" href={`/projects/${projectId}/cases`}>Back to Project Cases</Link>
+          </div>
+        ) : null}
       </div>
       <div className="grid two">
         <div className="card">

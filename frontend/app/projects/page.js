@@ -51,8 +51,8 @@ export default async function ProjectsPage() {
                   <td style={{ display: "flex", gap: 8 }}>
                     {p.is_active && p.key_activated ? (
                       <>
-                        <Link className="button detail-btn" href={`/?project_id=${p.id}`}>Dashboard</Link>
-                        <Link className="button detail-btn" href={`/cases?project_id=${p.id}`}>Cases</Link>
+                        <Link className="button detail-btn" href={`/projects/${p.id}`}>Dashboard</Link>
+                        <Link className="button detail-btn" href={`/projects/${p.id}/cases`}>Cases</Link>
                       </>
                     ) : (
                       <span className="subtitle">{p.is_active ? "Rotate Key 후 접근 가능" : "Activate 후 접근 가능"}</span>

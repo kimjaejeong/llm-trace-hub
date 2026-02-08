@@ -245,8 +245,8 @@ export default async function TraceDetailPage({ params, searchParams }) {
         {projectId ? (
           <div style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
             <span className="pill neutral">project_id: {projectId}</span>
-            <Link className="button detail-btn" href={`/?project_id=${projectId}`}>Back to Dashboard</Link>
-            <Link className="button detail-btn" href={`/cases?project_id=${projectId}`}>Project Cases</Link>
+            <Link className="button detail-btn" href={`/projects/${projectId}`}>Back to Dashboard</Link>
+            <Link className="button detail-btn" href={`/projects/${projectId}/cases`}>Project Cases</Link>
           </div>
         ) : null}
         <div className="grid two">
