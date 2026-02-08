@@ -53,27 +53,27 @@ docker compose up --build
 
 프로젝트 생성 후 `Rotate Key`로 키를 발급하면 해당 프로젝트에서 tracing ingestion이 활성화됩니다.
 
-![Projects Overview](docs/images/projects-overview.svg)
+![Projects Overview](docs/images/projects-overview.png)
 
 ### 2) 프로젝트 내부 Trace Dashboard
 
 `Dashboard` 버튼으로 진입하면 해당 프로젝트 전용 트레이스만 보입니다.
 KPI, Priority Queue, Trace 목록(10개 단위 페이징)으로 운영 상태를 빠르게 확인합니다.
 
-![Project Trace Dashboard](docs/images/project-dashboard.svg)
+![Project Trace Dashboard](docs/images/project-dashboard.png)
 
 ### 3) 프로젝트 내부 Cases 탭
 
 `Cases` 탭에서 에스컬레이션된 트레이스만 모아 triage 합니다.
 담당자 지정, 상태 변경(ack/resolve), overdue 모니터링에 사용합니다.
 
-![Project Cases](docs/images/project-cases.svg)
+![Project Cases](docs/images/project-cases.png)
 
 ### 4) Trace Detail / LangGraph Node 관측
 
 Trace 상세에서 LangGraph Node-Edge 그래프를 보고, 노드 클릭 시 Node Detail로 들어가 토큰 사용량/지연시간/소스 매핑을 확인합니다.
 
-![Trace Detail and LangGraph Node Detail](docs/images/trace-detail-langgraph.svg)
+![Trace Detail and LangGraph Node Detail](docs/images/trace-detail-langgraph.png)
 
 ### 권장 사용 순서
 
