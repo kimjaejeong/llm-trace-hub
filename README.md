@@ -64,9 +64,13 @@ x-api-key: dev-key
 - `GET /api/v1/projects`
 - `POST /api/v1/projects`
 - `POST /api/v1/projects/{project_id}/rotate-key`
+- `GET /api/v1/projects/{project_id}/current-key`
 - `POST /api/v1/projects/{project_id}/activate`
 - `POST /api/v1/projects/{project_id}/deactivate`
 - `DELETE /api/v1/projects/{project_id}` (soft delete = deactivate)
+
+프로젝트 생성 직후에는 `key_activated=false` 상태입니다.
+`Rotate Key`를 1회 실행해야 tracing ingestion이 활성화됩니다.
 
 ### Query
 - `GET /api/v1/traces`
@@ -105,15 +109,15 @@ python examples/send_trace_via_api.py
 
 ```bash
 pip install -e sdk/python
-python examples/send_trace_via_sdk.py
-python examples/send_langgraph_trace_via_sdk.py
-python examples/send_langgraph_complex_via_sdk.py
+TRACEHUB_API_KEY=<rotated_project_key> python examples/send_trace_via_sdk.py
+TRACEHUB_API_KEY=<rotated_project_key> python examples/send_langgraph_trace_via_sdk.py
+TRACEHUB_API_KEY=<rotated_project_key> python examples/send_langgraph_complex_via_sdk.py
 ```
 
 설치 없이 실행하려면:
 
 ```bash
-PYTHONPATH=sdk/python python examples/send_trace_via_sdk.py
+PYTHONPATH=sdk/python TRACEHUB_API_KEY=<rotated_project_key> python examples/send_trace_via_sdk.py
 ```
 
 성공 시 출력된 `trace_id`로 확인:
@@ -281,6 +285,8 @@ curl -X POST http://localhost:8000/api/v1/ingest/langgraph-runs \
 관리자 프로젝트 API는 admin key가 필요합니다.
 - 권장 env: `ADMIN_KEY`
 - dev 환경 기본: `dev-key`
+
+Tracing ingestion(ingest/evals)은 프로젝트 키가 `Rotate Key`로 활성화되기 전에는 `403`으로 차단됩니다.
 
 ## 10) 개발 실행 (개별)
 

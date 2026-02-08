@@ -40,6 +40,9 @@ export default function ProjectCreateForm() {
         <div style={{ marginTop: 10 }}>
           <p className="subtitle">New API key (save now):</p>
           <div className="code">{created.api_key}</div>
+          <p className="subtitle" style={{ marginTop: 6 }}>
+            Ingestion is locked by default. Click `Rotate Key` once to activate ingestion for this project.
+          </p>
         </div>
       ) : null}
     </div>

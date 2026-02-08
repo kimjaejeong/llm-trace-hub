@@ -33,24 +33,29 @@ export default async function ProjectsPage() {
         <div className="table-wrap" style={{ marginTop: 10 }}>
           <table className="table">
             <thead>
-              <tr><th>Project</th><th>Status</th><th>Trace Count</th><th>Open Cases</th><th>Created</th><th>Open</th><th>Admin</th></tr>
+              <tr><th>Project</th><th>Status</th><th>Ingestion</th><th>Trace Count</th><th>Open Cases</th><th>Created</th><th>Open</th><th>Admin</th></tr>
             </thead>
             <tbody>
               {projects.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td><span className={p.is_active ? "pill ok" : "pill neutral"}>{p.is_active ? "active" : "inactive"}</span></td>
+                  <td>
+                    <span className={p.key_activated ? "pill ok" : "pill warn"}>
+                      {p.key_activated ? "enabled" : "rotate required"}
+                    </span>
+                  </td>
                   <td>{p.trace_count}</td>
                   <td>{p.open_case_count}</td>
                   <td>{new Date(p.created_at).toLocaleString()}</td>
                   <td style={{ display: "flex", gap: 8 }}>
-                    {p.is_active ? (
+                    {p.is_active && p.key_activated ? (
                       <>
                         <Link className="button detail-btn" href={`/?project_id=${p.id}`}>Dashboard</Link>
                         <Link className="button detail-btn" href={`/cases?project_id=${p.id}`}>Cases</Link>
                       </>
                     ) : (
-                      <span className="subtitle">Activate 후 접근 가능</span>
+                      <span className="subtitle">{p.is_active ? "Rotate Key 후 접근 가능" : "Activate 후 접근 가능"}</span>
                     )}
                   </td>
                   <td><ProjectAdminActions projectId={p.id} isActive={p.is_active} /></td>

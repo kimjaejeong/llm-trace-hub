@@ -2,8 +2,17 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Any
+
+from _env import load_repo_env
+
+ROOT = Path(__file__).resolve().parents[1]
+SDK_PATH = ROOT / "sdk" / "python"
+if str(SDK_PATH) not in sys.path:
+    sys.path.insert(0, str(SDK_PATH))
 
 from llm_trace_hub import LLMTraceClient
 
@@ -82,7 +91,11 @@ def run_node(
 
 
 def main() -> None:
-    client = LLMTraceClient(base_url=os.getenv("TRACEHUB_BASE_URL", "http://localhost:8000"), api_key=os.getenv("TRACEHUB_API_KEY", "dev-key"))
+    load_repo_env()
+    api_key = os.getenv("TRACEHUB_API_KEY")
+    if not api_key:
+        raise RuntimeError("TRACEHUB_API_KEY is required. Rotate Key in /projects first.")
+    client = LLMTraceClient(base_url=os.getenv("TRACEHUB_BASE_URL", "http://localhost:8000"), api_key=api_key)
     trace_id = client.start_langgraph_run(
         graph_name="complex_refund_agent",
         run_id=f"lg-complex-{int(time.time())}",

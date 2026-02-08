@@ -56,3 +56,14 @@ async def require_admin(
     if not _is_admin_key(x_api_key):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin key required")
     return True
+
+
+async def get_project_for_ingest(
+    project: Project = Depends(get_project),
+) -> Project:
+    if not project.key_activated:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key not provisioned for ingestion. Rotate Key first.",
+        )
+    return project

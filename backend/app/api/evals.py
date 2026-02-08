@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_project
+from app.api.deps import get_project_for_ingest
 from app.db.session import get_db
 from app.models import Project
 from app.schemas.eval import EvalCreateRequest
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/v1", tags=["evals"])
 @router.post("/evals")
 def create_eval(
     payload: EvalCreateRequest,
-    project: Project = Depends(get_project),
+    project: Project = Depends(get_project_for_ingest),
     db: Session = Depends(get_db),
 ):
     service = EvalService(db, project.id)

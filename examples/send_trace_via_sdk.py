@@ -1,11 +1,26 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
+import sys
+from pathlib import Path
+
+from _env import load_repo_env
+
+ROOT = Path(__file__).resolve().parents[1]
+SDK_PATH = ROOT / "sdk" / "python"
+if str(SDK_PATH) not in sys.path:
+    sys.path.insert(0, str(SDK_PATH))
+
 from llm_trace_hub import LLMTraceClient
 
 
 def main() -> None:
-    client = LLMTraceClient(base_url="http://localhost:8000", api_key="dev-key")
+    load_repo_env()
+    api_key = os.getenv("TRACEHUB_API_KEY")
+    if not api_key:
+        raise RuntimeError("TRACEHUB_API_KEY is required. Rotate Key in /projects first.")
+    client = LLMTraceClient(base_url=os.getenv("TRACEHUB_BASE_URL", "http://localhost:8000"), api_key=api_key)
 
     trace_id = client.start_trace(
         name="sdk-demo-trace",

@@ -32,6 +32,7 @@ class ProjectService:
                     "id": project.id,
                     "name": project.name,
                     "is_active": bool(project.is_active),
+                    "key_activated": bool(project.key_activated),
                     "created_at": project.created_at,
                     "trace_count": int(trace_count),
                     "open_case_count": int(open_case_count),
@@ -42,13 +43,14 @@ class ProjectService:
     def create_project(self, name: str) -> dict:
         api_key = f"proj_{secrets.token_urlsafe(18)}"
         key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
-        project = Project(name=name, api_key_hash=key_hash)
+        project = Project(name=name, api_key_hash=key_hash, current_api_key=api_key)
         self.db.add(project)
         self.db.commit()
         self.db.refresh(project)
         return {
             "id": project.id,
             "name": project.name,
+            "key_activated": bool(project.key_activated),
             "created_at": project.created_at,
             "api_key": api_key,
         }
@@ -63,13 +65,24 @@ class ProjectService:
         project = self._get_project(project_id)
         api_key = f"proj_{secrets.token_urlsafe(18)}"
         project.api_key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        project.current_api_key = api_key
+        project.key_activated = True
         self.db.commit()
         self.db.refresh(project)
         return {
             "id": project.id,
             "name": project.name,
+            "key_activated": bool(project.key_activated),
             "created_at": project.created_at,
             "api_key": api_key,
+        }
+
+    def get_current_key(self, project_id: UUID) -> dict:
+        project = self._get_project(project_id)
+        return {
+            "project_id": project.id,
+            "key_activated": bool(project.key_activated),
+            "api_key": project.current_api_key,
         }
 
     def set_project_active(self, project_id: UUID, is_active: bool) -> dict:
@@ -81,5 +94,6 @@ class ProjectService:
             "id": project.id,
             "name": project.name,
             "is_active": bool(project.is_active),
+            "key_activated": bool(project.key_activated),
             "created_at": project.created_at,
         }

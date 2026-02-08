@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin
 from app.db.session import get_db
-from app.schemas.project import ProjectCreateIn, ProjectCreateOut, ProjectListItem
+from app.schemas.project import ProjectCreateIn, ProjectCreateOut, ProjectCurrentKeyOut, ProjectListItem
 from app.services.project_service import ProjectService
 
 
@@ -36,6 +36,15 @@ def rotate_project_key(
 ):
     service = ProjectService(db)
     return service.rotate_project_key(project_id)
+
+
+@router.get("/{project_id}/current-key", response_model=ProjectCurrentKeyOut, dependencies=[Depends(require_admin)])
+def get_current_key(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+):
+    service = ProjectService(db)
+    return service.get_current_key(project_id)
 
 
 @router.post("/{project_id}/deactivate", dependencies=[Depends(require_admin)])
