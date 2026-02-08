@@ -44,6 +44,46 @@ docker compose up --build
 기본 API Key:
 - `dev-key`
 
+## 처음 보는 사용자를 위한 UI 가이드 (Projects 중심)
+
+현재 UI는 `Projects`가 메인 진입점입니다.
+전역 `Trace Dashboard`, `Cases`가 아니라, **프로젝트 안에서만** 대시보드/케이스를 보도록 구성되어 있습니다.
+
+### 1) Projects 메인에서 프로젝트 생성/관리
+
+프로젝트 생성 후 `Rotate Key`로 키를 발급하면 해당 프로젝트에서 tracing ingestion이 활성화됩니다.
+
+![Projects Overview](docs/images/projects-overview.svg)
+
+### 2) 프로젝트 내부 Trace Dashboard
+
+`Dashboard` 버튼으로 진입하면 해당 프로젝트 전용 트레이스만 보입니다.
+KPI, Priority Queue, Trace 목록(10개 단위 페이징)으로 운영 상태를 빠르게 확인합니다.
+
+![Project Trace Dashboard](docs/images/project-dashboard.svg)
+
+### 3) 프로젝트 내부 Cases 탭
+
+`Cases` 탭에서 에스컬레이션된 트레이스만 모아 triage 합니다.
+담당자 지정, 상태 변경(ack/resolve), overdue 모니터링에 사용합니다.
+
+![Project Cases](docs/images/project-cases.svg)
+
+### 4) Trace Detail / LangGraph Node 관측
+
+Trace 상세에서 LangGraph Node-Edge 그래프를 보고, 노드 클릭 시 Node Detail로 들어가 토큰 사용량/지연시간/소스 매핑을 확인합니다.
+
+![Trace Detail and LangGraph Node Detail](docs/images/trace-detail-langgraph.svg)
+
+### 권장 사용 순서
+
+1. `Projects`에서 프로젝트 생성
+2. `Rotate Key` 1회 실행 후 키를 SDK `.env`에 설정
+3. `examples/send_langgraph_complex_via_sdk.py` 실행해 트레이스 적재
+4. 프로젝트 `Dashboard`에서 trace 확인
+5. `Tracing Detail`에서 노드 그래프/노드 상세 확인
+6. 이슈 건은 `Cases`에서 triage
+
 ## 4) 인증
 
 모든 API 요청 헤더:

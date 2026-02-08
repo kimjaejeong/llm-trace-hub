@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-label="Project cases tab">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8fcff"/>
+      <stop offset="100%" stop-color="#edf4ff"/>
+    </linearGradient>
+    <style>
+      .t{font-family:Arial,sans-serif;fill:#17314f}
+      .title{font-size:30px;font-weight:700}
+      .h{font-size:20px;font-weight:700}
+      .muted{font-size:14px;fill:#5a6f86}
+      .small{font-size:13px}
+    </style>
+  </defs>
+  <rect width="1400" height="760" fill="url(#bg)"/>
+
+  <rect x="36" y="24" width="1328" height="64" rx="12" fill="#ffffff" stroke="#cad8ea"/>
+  <rect x="56" y="40" width="150" height="32" rx="8" fill="#eef3fb" stroke="#cad8ea"/>
+  <text x="74" y="61" class="t small">Back To Projects</text>
+  <rect x="218" y="40" width="162" height="32" rx="8" fill="#f1f4f9" stroke="#cad8ea"/>
+  <text x="245" y="61" class="t small">Trace Dashboard</text>
+  <rect x="392" y="40" width="90" height="32" rx="8" fill="#def3ff" stroke="#93c6df"/>
+  <text x="424" y="61" class="t small">Cases</text>
+
+  <rect x="36" y="106" width="1328" height="126" rx="14" fill="#ffffff" stroke="#cad8ea"/>
+  <text x="60" y="148" class="t title">Case Queue</text>
+  <text x="60" y="176" class="t muted">Escalated traces by this project. Track owner and status.</text>
+
+  <g transform="translate(36,246)">
+    <rect x="0" y="0" width="1328" height="108" rx="14" fill="#ffffff" stroke="#cad8ea"/>
+    <text x="24" y="34" class="t h">Case KPI</text>
+    <rect x="24" y="46" width="300" height="48" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="38" y="75" class="t small">Open: 3</text>
+    <rect x="340" y="46" width="300" height="48" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="354" y="75" class="t small">Acknowledged: 2</text>
+    <rect x="656" y="46" width="300" height="48" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="670" y="75" class="t small">Resolved: 14</text>
+    <rect x="972" y="46" width="332" height="48" rx="10" fill="#fff6e3" stroke="#e6c893"/>
+    <text x="986" y="75" class="t small">Overdue gt 24h: 1</text>
+  </g>
+
+  <g transform="translate(36,370)">
+    <rect x="0" y="0" width="1328" height="352" rx="14" fill="#ffffff" stroke="#cad8ea"/>
+    <text x="24" y="34" class="t h">Cases List</text>
+    <rect x="24" y="50" width="1280" height="36" rx="8" fill="#f4f8ff"/>
+    <text x="36" y="73" class="t small">Case | Trace | Reason | Status | Assignee | Created</text>
+
+    <rect x="24" y="96" width="1280" height="52" rx="8" fill="#fcfdff" stroke="#dde7f4"/>
+    <text x="36" y="127" class="t small">c-001 | t-17a | SLA_BREACH | open | oncall-a | 2026-02-08 10:21</text>
+    <rect x="24" y="154" width="1280" height="52" rx="8" fill="#fcfdff" stroke="#dde7f4"/>
+    <text x="36" y="185" class="t small">c-002 | t-4bf | POLICY_VIOLATION | acknowledged | sec-team | 2026-02-08 11:43</text>
+
+    <rect x="24" y="300" width="90" height="32" rx="8" fill="#f0f4fa" stroke="#cad8ea"/>
+    <text x="54" y="321" class="t small">Prev</text>
+    <text x="620" y="321" class="t muted">Page 1 / N</text>
+    <rect x="1214" y="300" width="90" height="32" rx="8" fill="#ebf7ff" stroke="#9fcbe3"/>
+    <text x="1246" y="321" class="t small">Next</text>
+  </g>
+</svg>

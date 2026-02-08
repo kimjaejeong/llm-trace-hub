@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-label="Project trace dashboard">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#eef4ff"/>
+    </linearGradient>
+    <style>
+      .t{font-family:Arial,sans-serif;fill:#17314f}
+      .title{font-size:30px;font-weight:700}
+      .h{font-size:20px;font-weight:700}
+      .muted{font-size:14px;fill:#5a6f86}
+      .small{font-size:13px}
+    </style>
+  </defs>
+  <rect width="1400" height="760" fill="url(#bg)"/>
+
+  <rect x="36" y="24" width="1328" height="64" rx="12" fill="#ffffff" stroke="#cad8ea"/>
+  <rect x="56" y="40" width="150" height="32" rx="8" fill="#eef3fb" stroke="#cad8ea"/>
+  <text x="74" y="61" class="t small">Back To Projects</text>
+  <rect x="218" y="40" width="162" height="32" rx="8" fill="#def3ff" stroke="#93c6df"/>
+  <text x="245" y="61" class="t small">Trace Dashboard</text>
+  <rect x="392" y="40" width="90" height="32" rx="8" fill="#f1f4f9" stroke="#cad8ea"/>
+  <text x="424" y="61" class="t small">Cases</text>
+  <text x="1260" y="61" class="t small">project_id</text>
+
+  <rect x="36" y="106" width="1328" height="142" rx="14" fill="#ffffff" stroke="#cad8ea"/>
+  <text x="60" y="148" class="t title">Realtime LLM Trace Control Room</text>
+  <text x="60" y="176" class="t muted">KPIs for this project only: error rate, latency, SLA breach, escalation.</text>
+
+  <rect x="60" y="192" width="230" height="42" rx="10" fill="#ebf7ff" stroke="#9fcbe3"/>
+  <text x="120" y="218" class="t small">Project Cases</text>
+
+  <g transform="translate(36,266)">
+    <rect x="0" y="0" width="1328" height="126" rx="14" fill="#ffffff" stroke="#cad8ea"/>
+    <text x="24" y="34" class="t h">KPI</text>
+    <rect x="24" y="48" width="240" height="56" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="38" y="70" class="t muted">Open Traces</text><text x="38" y="94" class="t" font-size="22" font-weight="700">18</text>
+    <rect x="280" y="48" width="240" height="56" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="294" y="70" class="t muted">Error Rate</text><text x="294" y="94" class="t" font-size="22" font-weight="700">7%</text>
+    <rect x="536" y="48" width="240" height="56" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="550" y="70" class="t muted">P95 Latency</text><text x="550" y="94" class="t" font-size="22" font-weight="700">2.4s</text>
+    <rect x="792" y="48" width="240" height="56" rx="10" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="806" y="70" class="t muted">SLA Breach</text><text x="806" y="94" class="t" font-size="22" font-weight="700">3</text>
+  </g>
+
+  <g transform="translate(36,406)">
+    <rect x="0" y="0" width="1328" height="316" rx="14" fill="#ffffff" stroke="#cad8ea"/>
+    <text x="24" y="36" class="t h">Traces (paginated, page size 10)</text>
+    <rect x="24" y="52" width="1280" height="36" rx="8" fill="#f4f8ff"/>
+    <text x="36" y="75" class="t small">Trace | Status | Model | User/Session | Duration | SLA | Decision | Risk | Detail</text>
+
+    <rect x="24" y="98" width="1280" height="52" rx="8" fill="#fcfdff" stroke="#dde7f4"/>
+    <text x="36" y="129" class="t small">0f2... | success | gpt-4.1-mini | u-1/s-7 | 1.2s | ok | ALLOW_ANSWER | 18 | Tracing Detail</text>
+
+    <rect x="24" y="156" width="1280" height="52" rx="8" fill="#fcfdff" stroke="#dde7f4"/>
+    <text x="36" y="187" class="t small">17a... | error | gpt-4.1-mini | u-9/s-3 | 34.5s | breach | ESCALATE | 91 | Tracing Detail</text>
+
+    <rect x="24" y="264" width="90" height="32" rx="8" fill="#f0f4fa" stroke="#cad8ea"/>
+    <text x="54" y="285" class="t small">Prev</text>
+    <text x="620" y="285" class="t muted">Page 1 / N</text>
+    <rect x="1214" y="264" width="90" height="32" rx="8" fill="#ebf7ff" stroke="#9fcbe3"/>
+    <text x="1246" y="285" class="t small">Next</text>
+  </g>
+</svg>

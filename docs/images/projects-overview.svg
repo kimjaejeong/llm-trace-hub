@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-label="Projects page overview">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f6fbff"/>
+      <stop offset="100%" stop-color="#edf3ff"/>
+    </linearGradient>
+    <style>
+      .t{font-family:Arial,sans-serif;fill:#15324d}
+      .muted{fill:#5b7088;font-size:16px}
+      .title{font-size:34px;font-weight:700}
+      .h{font-size:22px;font-weight:700}
+      .small{font-size:14px}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1400" height="760" fill="url(#bg)"/>
+  <rect x="36" y="24" width="1328" height="64" rx="12" fill="#15395f"/>
+  <text x="64" y="64" class="t" fill="#f2f8ff" font-size="22" font-family="Arial" font-weight="700">Projects</text>
+
+  <rect x="36" y="112" width="1328" height="120" rx="14" fill="#ffffff" stroke="#cdd9ea"/>
+  <text x="64" y="160" class="t title">Projects</text>
+  <text x="64" y="194" class="t muted">Create project, rotate key, open dashboard/cases per project.</text>
+
+  <rect x="36" y="252" width="420" height="190" rx="14" fill="#ffffff" stroke="#cdd9ea"/>
+  <text x="60" y="288" class="t h">Create Project</text>
+  <rect x="60" y="308" width="360" height="40" rx="8" fill="#f7fbff" stroke="#cdd9ea"/>
+  <text x="72" y="334" class="t small">project name</text>
+  <rect x="60" y="362" width="160" height="40" rx="8" fill="#ddf3fb" stroke="#8cc0d5"/>
+  <text x="92" y="387" class="t" font-size="15" font-weight="700">Create</text>
+
+  <rect x="476" y="252" width="888" height="464" rx="14" fill="#ffffff" stroke="#cdd9ea"/>
+  <text x="500" y="288" class="t h">Project List</text>
+
+  <rect x="500" y="306" width="840" height="42" rx="8" fill="#f3f7ff"/>
+  <text x="514" y="333" class="t small">Project | Status | Ingestion | Trace Count | Open Cases | Open | Admin</text>
+
+  <rect x="500" y="362" width="840" height="96" rx="10" fill="#fbfdff" stroke="#d9e3f1"/>
+  <text x="516" y="392" class="t" font-size="16" font-weight="700">customer-support-agent</text>
+  <text x="516" y="418" class="t muted">active / key enabled / trace 124 / open cases 3</text>
+  <rect x="1000" y="376" width="110" height="34" rx="8" fill="#e5f5ff" stroke="#9ccae4"/>
+  <text x="1022" y="398" class="t small">Dashboard</text>
+  <rect x="1120" y="376" width="80" height="34" rx="8" fill="#edf2f9" stroke="#c4d3e7"/>
+  <text x="1146" y="398" class="t small">Cases</text>
+  <rect x="1212" y="376" width="112" height="34" rx="8" fill="#ffeecf" stroke="#e0c286"/>
+  <text x="1234" y="398" class="t small">Rotate Key</text>
+
+  <rect x="500" y="472" width="840" height="96" rx="10" fill="#fbfdff" stroke="#d9e3f1"/>
+  <text x="516" y="502" class="t" font-size="16" font-weight="700">doc-rag-agent</text>
+  <text x="516" y="528" class="t muted">inactive / rotate required / trace 0 / open cases 0</text>
+
+  <text x="36" y="742" class="t muted">Flow: Projects -> open a project -> Trace Dashboard tab / Cases tab</text>
+</svg>
