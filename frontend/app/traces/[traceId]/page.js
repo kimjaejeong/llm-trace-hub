@@ -1,4 +1,5 @@
 import { fetchApi } from "../../../components/api";
+import LiveRefreshShell from "../../../components/live-refresh-shell";
 
 function pill(status) {
   if (status === "success") return "pill ok";
@@ -34,16 +35,37 @@ function treeRows(spans) {
   return rows;
 }
 
+function stateDiffRows(nodes) {
+  return nodes.map((node) => {
+    const inKeys = Object.keys(node.attributes?.input_state || {});
+    const outKeys = Object.keys(node.attributes?.output_state || {});
+    const inSet = new Set(inKeys);
+    const outSet = new Set(outKeys);
+    const added = outKeys.filter((key) => !inSet.has(key));
+    const removed = inKeys.filter((key) => !outSet.has(key));
+    const kept = outKeys.filter((key) => inSet.has(key));
+    return {
+      id: node.id,
+      name: node.attributes?.node_name || node.name,
+      added,
+      removed,
+      kept,
+    };
+  });
+}
+
 export default async function TraceDetailPage({ params }) {
   const { traceId } = await params;
   const data = await fetchApi(`/api/v1/traces/${traceId}`);
   const graphNodes = data.spans.filter((s) => s.span_type === "langgraph_node");
   const tree = treeRows(data.spans);
+  const diffs = stateDiffRows(graphNodes);
 
   return (
     <div className="grid two">
       <div className="grid">
         <div className="card">
+          <LiveRefreshShell label={`Trace ${traceId}`} />
           <h1 className="title">Trace Detail</h1>
           <div className="kv"><div className="k">trace_id</div><div>{data.trace.id}</div></div>
           <div className="kv"><div className="k">status</div><div><span className={pill(data.trace.status)}>{data.trace.status}</span></div></div>
@@ -85,6 +107,26 @@ export default async function TraceDetailPage({ params }) {
                       <br />
                       out: {(Object.keys(node.attributes?.output_state || {})).join(", ") || "-"}
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>State Transition Diff (custom)</h3>
+          <p className="subtitle">Keys introduced/removed per LangGraph node, for state-shape drift detection.</p>
+          <div className="table-wrap" style={{ marginTop: 10 }}>
+            <table className="table">
+              <thead><tr><th>Node</th><th>Added Keys</th><th>Removed Keys</th><th>Stable Keys</th></tr></thead>
+              <tbody>
+                {diffs.map((d) => (
+                  <tr key={d.id}>
+                    <td>{d.name}</td>
+                    <td>{d.added.join(", ") || "-"}</td>
+                    <td>{d.removed.join(", ") || "-"}</td>
+                    <td>{d.kept.join(", ") || "-"}</td>
                   </tr>
                 ))}
               </tbody>
