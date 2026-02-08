@@ -98,6 +98,7 @@ python examples/send_trace_via_api.py
 ```bash
 pip install -e sdk/python
 python examples/send_trace_via_sdk.py
+python examples/send_langgraph_trace_via_sdk.py
 ```
 
 설치 없이 실행하려면:
@@ -170,6 +171,12 @@ client.end_langgraph_node(node_id="policy_lookup", output_state={"policy_id": "r
 
 client.flush()
 ```
+
+`start_langgraph_node()`는 기본적으로 호출 지점의 소스 위치를 `metadata.source_ref`에 자동 첨부합니다.
+Trace Detail 화면에서 아래를 확인할 수 있습니다.
+- `LangGraph Live Nodes`: 노드 상태가 실시간(자동 refresh)으로 반영되는지
+- `LangGraph Node-Edge Graph`: 노드/엣지가 어떻게 연결되었는지
+- `Source` 컬럼 + `LangGraph Source Coverage`: 노드별 소스 매핑 여부
 
 ## 8) 대표 API 예시
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextvars
+import inspect
 import time
 import uuid
 from dataclasses import dataclass
@@ -44,6 +45,15 @@ class LLMTraceClient:
         self._queue: list[dict[str, Any]] = []
         self._last_flush = time.time()
         self._langgraph_nodes: dict[str, str] = {}
+
+    @staticmethod
+    def _auto_source_ref(stack_depth: int = 2) -> dict[str, Any]:
+        frame = inspect.stack()[stack_depth]
+        return {
+            "file": frame.filename,
+            "line": frame.lineno,
+            "function": frame.function,
+        }
 
     @staticmethod
     def _raise_with_body(res: httpx.Response) -> None:
@@ -269,6 +279,7 @@ class LLMTraceClient:
         parent_node_id: str | None = None,
         input_state: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
+        source_ref: dict[str, Any] | None = None,
     ) -> NodeContext:
         trace_id = _current_trace_id.get()
         if not trace_id:
@@ -277,6 +288,8 @@ class LLMTraceClient:
         parent_span = self._langgraph_nodes.get(parent_node_id or "") or _current_span_id.get()
         span_id = str(uuid.uuid4())
         self._langgraph_nodes[node_id] = span_id
+        node_metadata = metadata.copy() if metadata else {}
+        node_metadata["source_ref"] = source_ref or node_metadata.get("source_ref") or self._auto_source_ref()
         self._enqueue(
             {
                 "trace_id": trace_id,
@@ -294,7 +307,7 @@ class LLMTraceClient:
                         "node_name": node_name,
                         "node_type": node_type,
                         "input_state": input_state or {},
-                        "metadata": metadata or {},
+                        "metadata": node_metadata,
                     },
                     "idempotency_key": f"{trace_id}:{node_id}:start",
                 },

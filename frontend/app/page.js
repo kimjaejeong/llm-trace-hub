@@ -144,6 +144,7 @@ export default async function TracesPage({ searchParams }) {
                 <th>Risk</th>
                 <th>LangGraph</th>
                 <th>Started</th>
+                <th>Detail</th>
               </tr>
             </thead>
             <tbody>
@@ -163,6 +164,7 @@ export default async function TracesPage({ searchParams }) {
                   <td><span className={riskPill(row.risk_score)}>{row.risk_score}</span></td>
                   <td>{row.decision?.policy_version ? "Judge + Policy" : (row.model ? "possible" : "-")}</td>
                   <td>{asDate(row.start_time)}</td>
+                  <td><Link className="button detail-btn" href={`/traces/${row.id}`}>Tracing Detail</Link></td>
                 </tr>
               ))}
             </tbody>
